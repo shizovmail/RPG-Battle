@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>__GAME_TITLE__</title>
+<style>
+  :root{--bg1:#10162b;--bg2:#1d2548;--fg:#fff;--card:#fff;--ink:#1c2436;--acc:#f4b52c;--tim:#f4b52c;--timtxt:#3a2a00}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:system-ui,"Segoe UI",Roboto,sans-serif;color:var(--fg);
+    background:radial-gradient(circle at 50% -10%,var(--bg2),var(--bg1) 70%);background-attachment:fixed;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;min-height:100vh}
+  body.tim1{--tim:#f6c400;--timtxt:#3a2a00;--bg2:#3a3012}
+  body.tim2{--tim:#b9783a;--timtxt:#fff;--bg2:#3a2616}
+  #app{width:100%;max-width:520px;margin:0 auto;padding:12px 14px 10px;flex:1;display:flex;flex-direction:column;gap:10px}
+  .panel{background:var(--card);color:var(--ink);border-radius:22px;padding:22px 20px;box-shadow:0 12px 30px rgba(0,0,0,.35);text-align:center;animation:pop .25s ease-out}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .big{font-size:3.2rem;line-height:1.1}
+  h2{margin:.3em 0;font-size:1.4rem}
+  p{margin:.4em 0}
+  .muted{opacity:.75;font-size:.92rem}
+  .tunggu-anim{display:inline-block;animation:goyang 1.2s ease-in-out infinite}
+  @keyframes goyang{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+  .kredit{padding:8px 12px 12px;text-align:center;font-size:.72rem;opacity:.6}
+
+  /* kartu karakter */
+  .hero{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:2px solid var(--tim);border-radius:18px;padding:10px 12px}
+  .hero .av{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;font-size:1.9rem;flex:none;border:3px solid #fff;box-shadow:0 3px 10px rgba(0,0,0,.4)}
+  .hero .in{flex:1;min-width:0}
+  .hero .nm{font-weight:800;font-size:1.02rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hero .rl{font-size:.8rem;opacity:.85}
+  .hpb{height:12px;border-radius:99px;background:rgba(0,0,0,.45);overflow:hidden;margin-top:5px;position:relative}
+  .hpb i{display:block;height:100%;background:linear-gradient(90deg,#2ecc71,#7bed9f);transition:width .4s}
+  .hpb i.m{background:linear-gradient(90deg,#f39c12,#f9ca24)} .hpb i.k{background:linear-gradient(90deg,#e74c3c,#ff7675)}
+  .hpt{font-size:.74rem;font-weight:700;opacity:.9;margin-top:2px}
+  .strip{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .strip .tm{background:rgba(255,255,255,.07);border-radius:14px;padding:7px 9px}
+  .strip .tm h4{margin:0 0 4px;font-size:.78rem;letter-spacing:.05em;display:flex;justify-content:space-between}
+  .strip .u{display:flex;align-items:center;gap:6px;font-size:.72rem;margin:2px 0}
+  .strip .u .e{width:18px;text-align:center}
+  .strip .u .hpb{flex:1;height:7px;margin:0}
+  .strip .u.mati{opacity:.4;text-decoration:line-through}
+  .strip .u.aku{font-weight:900;color:var(--tim)}
+
+  .top{display:flex;justify-content:space-between;align-items:center;font-weight:800}
+  .top .pill{background:rgba(255,255,255,.18);padding:4px 12px;border-radius:999px;font-size:.9rem}
+  .bar{height:12px;background:rgba(255,255,255,.2);border-radius:99px;overflow:hidden}
+  .bar i{display:block;height:100%;width:100%;background:#f4b52c;transition:width .25s linear}
+  .bar i.low{background:#ff5252}
+
+  /* pilih skill */
+  .judul{font-weight:900;font-size:1.05rem;margin:2px 0 2px}
+  .skills{display:grid;gap:8px}
+  .sk{display:flex;gap:10px;align-items:center;text-align:left;width:100%;border:3px solid transparent;border-radius:16px;padding:10px 12px;font:inherit;color:var(--ink);background:#fff;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+  .sk .ic{font-size:1.8rem;flex:none;width:40px;text-align:center}
+  .sk .tx{flex:1;min-width:0}
+  .sk .tx b{display:block;font-size:1rem}
+  .sk .tx small{display:block;font-size:.74rem;line-height:1.25;color:#566}
+  .sk .tg{font-size:.7rem;font-weight:800;background:#eef1f7;border-radius:999px;padding:2px 8px;flex:none;color:#445}
+  .sk.off{opacity:.45;cursor:not-allowed;box-shadow:none}
+  .sk.pilih{border-color:var(--tim);background:#fffbe8;box-shadow:0 0 0 3px rgba(255,255,255,.35),0 4px 0 rgba(0,0,0,.3)}
+  .tgs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tgt{display:flex;flex-direction:column;gap:3px;border:3px solid transparent;border-radius:14px;padding:8px 10px;font:inherit;color:var(--ink);background:#fff;cursor:pointer;text-align:left;box-shadow:0 4px 0 rgba(0,0,0,.3)}
+  .tgt b{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tgt small{font-size:.72rem;color:#566}
+  .tgt .hpb{margin-top:2px;height:8px;background:#dfe5f1}
+  .tgt.pilih{border-color:var(--tim);background:#fffbe8}
+  .tgt.musuh b::before{content:"⚔️ "} .tgt.kawan b::before{content:"💙 "}
+  .kunci{width:100%;border:0;border-radius:16px;padding:16px;font:inherit;font-size:1.15rem;font-weight:900;background:var(--tim);color:var(--timtxt);box-shadow:0 5px 0 rgba(0,0,0,.35);cursor:pointer}
+  .kunci:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+  .kunci[disabled]{opacity:.45;box-shadow:none}
+
+  /* soal */
+  .q{background:var(--card);color:var(--ink);border-radius:20px;padding:20px 18px;font-size:1.25rem;font-weight:800;line-height:1.35;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.25);white-space:pre-wrap;word-break:break-word}
+  .opsi{display:grid;gap:10px}
+  .op{display:flex;align-items:center;gap:12px;border:0;border-radius:16px;padding:16px 14px;font:inherit;font-size:1.1rem;font-weight:800;color:#fff;text-align:left;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.3);min-height:60px}
+  .op:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.3)}
+  .op b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.28);flex:none}
+  .op:nth-child(1){background:#2c56c9}.op:nth-child(2){background:#1f9d6b}.op:nth-child(3){background:#e08a00}.op:nth-child(4){background:#8a3fc7}
+  .op[disabled]{opacity:.55;box-shadow:none;transform:none}
+  .op.pilih{outline:4px solid #fff;opacity:1}
+  .isi{width:100%;font:inherit;font-size:1.3rem;font-weight:700;padding:16px;border-radius:16px;border:3px solid rgba(0,0,0,.15);text-align:center;margin-bottom:10px;color:#1c2436;background:#fff}
+  .info{background:rgba(255,255,255,.1);border-radius:12px;padding:8px 12px;font-size:.84rem;text-align:center}
+
+  .hasil.ok{background:linear-gradient(#e9fff1,#fff)} .hasil.no{background:linear-gradient(#fff0f0,#fff)}
+  .hasil .big{animation:lompat .8s ease-in-out 2}
+  @keyframes lompat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .hasil .no-anim{animation:tunduk 1.4s ease-in-out both}
+  @keyframes tunduk{0%{transform:none}40%{transform:translateY(10px) rotate(14deg)}100%{transform:translateY(10px) rotate(14deg)}}
+  .chip{display:inline-block;background:#eef1f7;color:#1c2436;border-radius:999px;padding:4px 12px;margin:3px;font-size:.9rem;font-weight:700}
+  .chip.r{background:#ffe3e3;color:#a12a2a}.chip.g{background:#dff7e8;color:#12704a}
+  .selesai-menang .big{animation:lompat .8s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div id="gk-header"></div>
+<main id="app"></main>
+<div class="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, esc = GK.esc, app = document.getElementById('app');
+  var API = GK.base + 'api_rpg.php';
+  var KEY = 'rpg_' + D.id;
+  var S = { sesi: 0, p: '', nama: '', key: '', sisa: null, total: 0, t0: 0, pollT: 0, mode: 'cari', final: false, terkirim: false, j: null };
+  var PERAN = { tank: ['Tank', '🛡️'], assassin: ['Assassin', '🗡️'], mage: ['Mage', '🔮'], healer: ['Healer', '✨'] };
+  var WARNA = { 1: { tank: '#f6c400', assassin: '#4b2a78', mage: '#d32f2f', healer: '#f4f4f8' }, 2: { tank: '#8d5a2b', assassin: '#1a1a1f', mage: '#8fd8f5', healer: '#43a85f' } };
+  var TIM = { 1: 'Tim Kiri', 2: 'Tim Kanan' };
+
+  function api(a, q, body) {
+    var u = API + '?a=' + a + (q ? '&' + q : '');
+    var opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' };
+    return fetch(u, opt).then(function (r) { return r.json(); });
+  }
+  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); } catch (e) {} }
+  function muat() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function hapus() { try { localStorage.removeItem(KEY); } catch (e) {} S.p = ''; S.sesi = 0; S.final = false; S.key = ''; }
+  function tema(t) { document.body.className = t === 1 ? 'tim1' : t === 2 ? 'tim2' : ''; }
+  function pct(hp, mx) { return Math.max(0, Math.min(100, mx ? hp / mx * 100 : 0)); }
+  function hpkls(p) { return p < 25 ? 'k' : p < 55 ? 'm' : ''; }
+  function tampil(html) { app.innerHTML = html; S.terkirim = false; }
+  function panel(html, kelas) { tampil('<div class="panel ' + (kelas || '') + '">' + html + '</div>'); }
+
+  // kartu karakter + ringkasan HP kedua tim
+  function hero(j) {
+    if (j.aku < 0) return '';
+    var u = j.unit[j.aku], p = pct(j.hp, j.mx), w = WARNA[j.tim][j.peran];
+    return '<div class="hero"><div class="av" style="background:' + w + '">' + PERAN[j.peran][1] + '</div><div class="in">'
+      + '<div class="nm">' + esc(j.nama) + '</div><div class="rl">' + PERAN[j.peran][0] + ' · ' + TIM[j.tim] + (j.mati ? ' · 💤 pingsan' : '') + '</div>'
+      + '<div class="hpb"><i class="' + hpkls(p) + '" style="width:' + p + '%"></i></div><div class="hpt">HP ' + j.hp + ' / ' + j.mx + '</div></div></div>';
+  }
+  function strip(j) {
+    var h = '<div class="strip">';
+    [1, 2].forEach(function (t) {
+      h += '<div class="tm"><h4><span>' + TIM[t].toUpperCase() + '</span><span>' + j.hidup[t] + '/4</span></h4>';
+      j.unit.filter(function (u) { return u.tim === t; }).forEach(function (u) {
+        var p = pct(u.hp, u.mx);
+        h += '<div class="u' + (u.hidup ? '' : ' mati') + (u.i === j.aku ? ' aku' : '') + '"><span class="e">' + PERAN[u.peran][1] + '</span><div class="hpb"><i class="' + hpkls(p) + '" style="width:' + p + '%"></i></div></div>';
+      });
+      h += '</div>';
+    });
+    return h + '</div>';
+  }
+  function kepala(j) { return hero(j) + strip(j); }
+  function atas(j, judul) {
+    return '<div class="top"><span class="pill">' + judul + '</span><span class="pill">Giliran ' + j.ronde + '</span></div>'
+      + (j.total > 0 ? '<div class="bar"><i id="bar"></i></div>' : '');
+  }
+
+  // ---------- mencari sesi ----------
+  function cari() {
+    S.mode = 'cari'; tema(0);
+    api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+      if (S.mode !== 'cari') return;
+      if (!j.ada || !j.aktif) { panel('<div class="big">🔒</div><h2>Game ditutup</h2><p>Guru belum membuka game ini.</p>'); return; }
+      if (j.sesi) { masuk(); return; }
+      panel('<div class="big tunggu-anim">⚔️</div><h2>Menunggu guru…</h2><p>Guru belum membuka lobi. Jangan tutup halaman ini.</p>');
+    }).catch(function () {
+      if (S.mode === 'cari') panel('<div class="big">📶</div><h2>Tidak ada koneksi</h2><p>Mencoba lagi…</p>');
+    }).then(function () { if (S.mode === 'cari') setTimeout(cari, 2500); });
+  }
+
+  function masuk() {
+    if (S.mode === 'nama') return;
+    S.mode = 'nama'; tema(0);
+    GK.askName(function (nama) {
+      api('gabung', '', { id: D.id, token: D.token, nama: nama, ptoken: '' }).then(function (j) {
+        if (j.ok) { S.sesi = j.sesi; S.p = j.p; S.nama = j.nama; simpan(); S.final = false; S.key = ''; S.mode = 'main'; poll(); return; }
+        GK.toast(j.pesan || 'Gagal masuk', '#d64545', 3200);
+        if (j.kode === 'nama') { S.mode = 'cari'; masuk(); }
+        else { S.mode = 'cari'; cari(); }
+      }).catch(function () { GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); S.mode = 'cari'; cari(); });
+    }, 'Masuk lobi');
+  }
+
+  // ---------- polling keadaan ----------
+  function poll() {
+    clearTimeout(S.pollT);
+    if (S.mode !== 'main') return;
+    var p;
+    if (S.final) {
+      p = api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); S.mode = 'cari'; masuk(); return 'stop'; }
+      });
+    } else {
+      p = api('state', 'sesi=' + S.sesi + '&p=' + encodeURIComponent(S.p)).then(function (j) {
+        if (!j.ok) { if (j.kode === 'keluar') { hapus(); S.mode = 'cari'; cari(); return 'stop'; } return; }
+        terapkan(j);
+      });
+    }
+    p.catch(function () {}).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
+  }
+
+  function terapkan(j) {
+    S.j = j; tema(j.tim);
+    S.sisa = j.sisa; S.total = j.total; S.t0 = Date.now();
+    var st = j.st === 'jeda' ? 'jeda' : j.st;
+    var hpkey = j.unit.map(function (u) { return u.hp; }).join(',');
+    var key = [st, j.ronde, j.tim, j.peran, j.sudah ? 1 : 0, j.dikunci ? 1 : 0, j.ikut ? 1 : 0, j.mati ? 1 : 0, j.hasil ? 1 : 0, j.sblm || ''].join('|');
+    if (st === 'lobi') key += '|' + j.unit.map(function (u) { return u.nama; }).join(',');
+    if (st === 'hasil' || st === 'selesai' || st === 'jeda') key += '|' + hpkey;
+    if (key === S.key) return;
+    S.key = key;
+    if (j.st === 'lobi') return lobi(j);
+    if (j.st === 'jeda') return panel('<div class="big">⏸️</div><h2>Game dijeda</h2><p>Guru sedang menunggu. Jangan tutup halaman ini.</p>');
+    if (j.st === 'pilih') return pilih(j);
+    if (j.st === 'soal') return soal(j);
+    if (j.st === 'hasil') return hasil(j);
+    if (j.st === 'selesai') return selesai(j);
+  }
+
+  function lobi(j) {
+    if (j.aku < 0) {
+      panel('<div class="big tunggu-anim">⏳</div><h2>Kamu sudah masuk!</h2><p><b>' + esc(j.nama) + '</b></p>'
+        + '<p>Menunggu guru mengatur peranmu (Tank, Assassin, Mage, atau Healer).</p><p class="muted">Pertandingan ini 4 lawan 4. Jika kamu belum kebagian peran, kamu tetap bisa menonton dan menggantikan teman bila perlu.</p>');
+      return;
+    }
+    var kat = {
+      tank: 'Pelindung tim. Lindungi teman agar damage lawan hanya masuk 10%–30%.',
+      assassin: 'Penyerang tunggal paling mematikan. Bersembunyi lalu serang dengan damage 275%.',
+      mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
+      healer: 'Penyembuh tim. Pulihkan HP temanmu.'
+    };
+    tampil('<div class="panel"><div class="big">' + PERAN[j.peran][1] + '</div><h2>' + PERAN[j.peran][0] + ' · ' + TIM[j.tim] + '</h2><p><b>' + esc(j.nama) + '</b></p><p>' + kat[j.peran] + '</p>'
+      + '<p class="muted">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>' + strip(j));
+  }
+
+  // ---------- memilih skill & target ----------
+  function pilih(j) {
+    if (j.aku < 0) return tampil('<div class="panel"><div class="big">👀</div><h2>Kamu menonton</h2><p>Lihat layar guru! Giliran ' + j.ronde + ': semua pemain sedang memilih skill.</p></div>' + strip(j));
+    if (j.mati) return tampil(hero(j) + '<div class="panel"><div class="big">💤</div><h2>Karaktermu pingsan</h2><p>Dukung timmu dari sini. Lihat layar guru!</p></div>' + strip(j));
+    if (!j.ikut) return panel('<div class="big">⏳</div><h2>Tunggu giliran berikutnya</h2><p>Karaktermu belum ikut giliran ini.</p>');
+    if (j.dikunci) {
+      var sk = j.skill.filter(function (x) { return x.id === j.pilihan.skill; })[0], tg = j.pilihan.target >= 0 ? j.unit[j.pilihan.target] : null;
+      return tampil(kepala(j) + '<div class="panel"><div class="big tunggu-anim">🔒</div><h2>Pilihan terkunci</h2><p>' + (sk ? sk.ikon + ' <b>' + esc(sk.nama) + '</b>' : '') + (tg ? ' → <b>' + PERAN[tg.peran][1] + ' ' + esc(tg.nama || PERAN[tg.peran][0]) + '</b>' : '') + '</p>'
+        + (j.pilihan.auto ? '<p class="muted">Waktu habis, dipilihkan acak.</p>' : '') + '<p class="muted">Menunggu pemain lain… lalu soal akan muncul.</p></div>');
+    }
+    var sel = { skill: null, target: -1 };
+    var h = atas(j, '🎯 Pilih skill') + '<div class="info">Pilih <b>skill</b>' + '. Jika perlu, pilih juga <b>target</b>-nya. Soal baru muncul setelah semua pemain memilih. Waktu habis = diacak.</div>'
+      + '<div class="skills" id="skills">'
+      + j.skill.map(function (s, i) {
+        var off = !s.ok;
+        var tg = s.tgt === 'musuh' ? 'pilih lawan' : s.tgt === 'sekutu' ? 'pilih sekutu' : 'tanpa target';
+        var cd = off ? (s.kunci ? 'terkunci' : 'cooldown ' + s.sisa) : tg;
+        return '<button class="sk' + (off ? ' off' : '') + '" data-i="' + i + '"' + (off ? ' disabled' : '') + '><span class="ic">' + s.ikon + '</span><span class="tx"><b>' + esc(s.nama) + '</b><small>' + esc(s.desc) + '</small></span><span class="tg">' + cd + '</span></button>';
+      }).join('') + '</div>'
+      + '<div id="tgbox"></div><button class="kunci" id="kunci" disabled>Kunci pilihan</button>';
+    tampil(kepala(j) + h);
+    var ronde = j.ronde;
+    function segarTarget() {
+      var s = sel.skill, box = document.getElementById('tgbox');
+      if (!s) { box.innerHTML = ''; return; }
+      if (s.tgt === 'tidak') { box.innerHTML = '<div class="info">Skill ini tidak perlu target.</div>'; return; }
+      box.innerHTML = '<div class="judul">' + (s.tgt === 'musuh' ? 'Pilih lawan yang diserang' : 'Pilih anggota timmu') + '</div><div class="tgs">'
+        + s.tg.map(function (i) {
+          var u = j.unit[i], p = pct(u.hp, u.mx);
+          return '<button class="tgt ' + (s.tgt === 'musuh' ? 'musuh' : 'kawan') + (sel.target === i ? ' pilih' : '') + '" data-u="' + i + '"><b>' + PERAN[u.peran][1] + ' ' + esc(u.nama || PERAN[u.peran][0]) + '</b><small>' + PERAN[u.peran][0] + ' · HP ' + u.hp + '/' + u.mx + '</small><div class="hpb"><i class="' + hpkls(p) + '" style="width:' + p + '%"></i></div></button>';
+        }).join('') + '</div>';
+      box.querySelectorAll('.tgt').forEach(function (b) { b.onclick = function () { sel.target = +b.dataset.u; segarTarget(); segarKunci(); }; });
+    }
+    function segarKunci() {
+      var s = sel.skill, ok = !!s && (s.tgt === 'tidak' || sel.target >= 0);
+      document.getElementById('kunci').disabled = !ok;
+    }
+    app.querySelectorAll('.sk').forEach(function (b) {
+      b.onclick = function () {
+        sel.skill = j.skill[+b.dataset.i]; sel.target = -1;
+        app.querySelectorAll('.sk').forEach(function (x) { x.classList.toggle('pilih', x === b); });
+        if (sel.skill.tgt !== 'tidak' && sel.skill.tg.length === 1) sel.target = sel.skill.tg[0];
+        segarTarget(); segarKunci();
+        if (sel.skill.tgt !== 'tidak') document.getElementById('tgbox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+    });
+    // pilihan awal yang masuk akal: bila hanya satu skill tersedia (mis. Assassin sedang menyerang dari bayangan)
+    var ada = j.skill.filter(function (s) { return s.ok; });
+    if (ada.length === 1 && ada[0].id === 'strike') app.querySelector('.sk:not(.off)').click();
+    document.getElementById('kunci').onclick = function () {
+      var k = this; if (k.disabled || S.terkirim) return; S.terkirim = true; k.disabled = true;
+      GK.beep(520, .08);
+      api('pilih', '', { sesi: S.sesi, p: S.p, ronde: ronde, skill: sel.skill.id, target: sel.skill.tgt === 'tidak' ? -1 : sel.target }).then(function (r) {
+        if (r.ok) { S.key = ''; S.terkirim = false; poll(); }
+        else { S.terkirim = false; k.disabled = false; GK.toast(r.pesan || 'Gagal memilih', '#d64545', 2200); if (r.kode === 'fase') S.key = ''; }
+      }).catch(function () { S.terkirim = false; k.disabled = false; GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); });
+    };
+  }
+
+  // ---------- menjawab soal ----------
+  function soal(j) {
+    if (j.aku < 0) return tampil('<div class="panel"><div class="big">👀</div><h2>Kamu menonton</h2><p>Semua pemain sedang menjawab soal. Lihat layar guru!</p></div>' + strip(j));
+    if (j.mati) return tampil(hero(j) + '<div class="panel"><div class="big">💤</div><h2>Karaktermu pingsan</h2><p>Dukung timmu dari sini. Lihat layar guru!</p></div>' + strip(j));
+    if (!j.ikut) return panel('<div class="big">⏳</div><h2>Tunggu giliran berikutnya</h2><p>Karaktermu belum ikut giliran ini.</p>');
+    var top = atas(j, '❓ Jawab soal');
+    if (j.sudah || !j.soal) {
+      tampil(kepala(j) + '<div class="panel"><div class="big">📨</div><h2>Jawaban terkirim</h2><p>Tunggu pemain lain selesai. Lihat layar guru!</p></div>');
+      return;
+    }
+    var q = j.soal, h = kepala(j) + top + '<div class="info">Jawab dengan benar agar skillmu berhasil. Salah atau waktu habis = skill gagal.</div><div class="q">' + esc(q.q) + '</div>';
+    if (q.t === 'pg') {
+      h += '<div class="opsi">' + q.o.map(function (t, i) { return '<button class="op" data-i="' + i + '"><b>' + 'ABCD'.charAt(i) + '</b><span>' + esc(t) + '</span></button>'; }).join('') + '</div>';
+    } else {
+      h += '<input class="isi" id="isi" maxlength="100" autocomplete="off" autocapitalize="none" placeholder="Ketik jawabanmu"><button class="kunci" id="kirim">Kirim jawaban</button>';
+    }
+    tampil(h);
+    var ronde = j.ronde;
+    function kirim(v, el) {
+      if (S.terkirim) return; S.terkirim = true;
+      app.querySelectorAll('button,input').forEach(function (b) { b.disabled = true; });
+      if (el) el.classList.add('pilih');
+      GK.beep(520, .08);
+      api('jawab', '', { sesi: S.sesi, p: S.p, ronde: ronde, jawab: v }).then(function (r) {
+        if (r.ok) { S.key = ''; poll(); }
+        else { S.key = ''; if (r.kode !== 'tutup' && r.kode !== 'ronde' && r.kode !== 'fase') GK.toast(r.pesan || 'Gagal mengirim', '#d64545', 2200); }
+      }).catch(function () { S.terkirim = false; S.key = ''; GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); });
+    }
+    if (q.t === 'pg') app.querySelectorAll('.op').forEach(function (b) { b.onclick = function () { kirim(+b.dataset.i, b); }; });
+    else {
+      var inp = document.getElementById('isi'), k = document.getElementById('kirim');
+      k.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } kirim(v); };
+      inp.onkeydown = function (e) { if (e.key === 'Enter') k.click(); };
+      setTimeout(function () { inp.focus(); }, 80);
+    }
+  }
+
+  // ---------- hasil giliran ----------
+  function hasil(j) {
+    if (j.aku < 0) return tampil('<div class="panel"><div class="big tunggu-anim">🎬</div><h2>Lihat layar guru!</h2><p>Aksi giliran ini sedang dimainkan.</p></div>' + strip(j));
+    var r = j.hasil;
+    if (!r) return tampil(hero(j) + '<div class="panel"><div class="big tunggu-anim">🎬</div><h2>Lihat layar guru!</h2><p>Aksi giliran ini sedang dimainkan.</p></div>' + strip(j));
+    var h = '<div class="panel hasil ' + (r.sukses ? 'ok' : 'no') + '">';
+    if (r.sukses) h += '<div class="big">🎉</div><h2>Skillmu berhasil!</h2>';
+    else h += '<div class="big no-anim">😞</div><h2>Skillmu gagal…</h2><p class="muted">Kamu tertunduk kecewa. Semangat, giliran depan pasti bisa!</p>';
+    if (r.auto) h += '<p class="muted">(skill dipilihkan acak karena waktu habis)</p>';
+    h += '<p>' + (r.dmg ? '<span class="chip r">Terkena −' + r.dmg + ' HP</span>' : '<span class="chip">Tidak terkena damage</span>') + (r.heal ? '<span class="chip g">Pulih +' + r.heal + ' HP</span>' : '') + '</p>'
+      + '<p class="muted">Lihat layar guru untuk melihat animasinya.</p></div>';
+    tampil(kepala(j) + h);
+    if (r.sukses) GK.sfxBenar(); else GK.sfxSalah();
+  }
+
+  function selesai(j) {
+    S.final = true;
+    var pem = j.pemenang;
+    if (j.akhir && j.akhir.batal) { panel('<div class="big">🚪</div><h2>Sesi ditutup guru</h2><p class="muted">Menunggu sesi berikutnya. Halaman ini akan mengecek otomatis.</p>'); return; }
+    var menang = pem === j.tim, seri = pem === 3, tonton = j.tim === 0;
+    var emoji = seri ? '🤝' : menang ? '🏆' : '💪';
+    var judul = seri ? 'Pertandingan seri!' : tonton ? ('🏆 ' + TIM[pem] + ' menang!') : menang ? 'Timmu MENANG!' : 'Belum beruntung, tetap hebat!';
+    var h = '<div class="big">' + emoji + '</div><h2>' + judul + '</h2>';
+    if (!tonton) h += '<p class="muted">Terima kasih sudah bermain, ' + esc(j.nama) + '!</p>';
+    h += '<p class="muted">Menunggu sesi berikutnya dari guru. Halaman ini akan mengecek otomatis.</p>';
+    tampil(kepala(j) + '<div class="panel ' + (menang ? 'selesai-menang' : '') + '">' + h + '</div>');
+  }
+
+  // ---------- bilah waktu ----------
+  setInterval(function () {
+    var bar = document.getElementById('bar');
+    if (!bar || S.sisa == null || !S.total || !S.j) return;
+    if (S.j.st !== 'pilih' && S.j.st !== 'soal') return;
+    var sisa = Math.max(0, S.sisa - (Date.now() - S.t0));
+    bar.style.width = Math.min(100, sisa / S.total * 100) + '%';
+    bar.className = sisa < 5000 ? 'low' : '';
+  }, 200);
+
+  GK.start({
+    needName: false,
+    onStart: function () {
+      var sv = muat();
+      if (sv && sv.p) { S.sesi = sv.sesi; S.p = sv.p; S.nama = sv.nama; S.mode = 'main'; poll(); }
+      else cari();
+    }
+  });
+})();
+</script>
+</body>
+</html>
