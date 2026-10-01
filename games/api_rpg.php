@@ -285,13 +285,13 @@ function rpg_gstate($game, $s)
     }
     $bank = count((json_decode((string)$game['data'], true) ?: [])['soal'] ?? []);
     list($bisa, $alasan) = $s['status'] === 'lobi' ? rpg_bisa_mulai($sid) : [true, ''];
-    $ant = json_decode((string)$s['antrian'], true) ?: [];
+    $maksR = rpg_giliran_maks($s);
     $r = [
         'ok' => true, 'sesi' => $sid, 'st' => $s['status'], 'ronde' => (int)$s['ronde'], 'sblm' => $s['sblm'],
         'cfg' => $cfg, 'bank' => $bank, 'unit' => rpg_unit_tampil($s, $units, $slot, true), 'pemain' => $pem,
         'bisa_mulai' => $bisa, 'alasan' => $alasan,
         'sisa' => rpg_sisa_ms($s, $cfg), 'total' => rpg_total_ms($s, $cfg),
-        'soal_sisa' => max(0, count($ant) - (int)$s['ptr']), 'soal_total' => count($ant),
+        'soal_sisa' => max(0, $maksR - (int)$s['ronde']), 'soal_total' => $maksR,
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'pemenang' => (int)$s['pemenang'], 'akhir' => rpg_akhir_info($s),
         'n_riw' => count(json_decode((string)$s['riwayat'], true) ?: []),

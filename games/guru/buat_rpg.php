@@ -108,7 +108,7 @@ Bilangan prima terkecil | 2 | dua</pre>
         </div>
       </details>
     </div>
-    <p class="small muted">Setiap giliran memakai <b>satu soal untuk tiap pemain yang masih hidup</b> (sampai 8 soal per giliran). Agar permainan tidak cepat selesai, siapkan <b>minimal 40 soal</b>; semakin banyak semakin lama dan seru.
+    <p class="small muted">Setiap giliran hanya muncul <b>4 soal yang sama untuk kedua tim</b>; soalnya diacak ke tiap anggota tim. Seorang pemain <b>tidak akan menerima soal yang sama lagi</b> sampai semua soal habis (lalu diulang sesuai pengaturan). Jumlah giliran maksimum = jumlah soal × (pengulangan + 1), jadi <b>20–40 soal</b> sudah cukup untuk pertandingan yang seru.
       Isian singkat dinilai otomatis tanpa memperhatikan huruf besar/kecil, spasi, dan tanda baca (0,5 dianggap sama dengan 0.5).</p>
     <div class="qbox" id="perkiraan"></div>
     <div id="rpg-soal"></div>
@@ -198,9 +198,9 @@ Bilangan prima terkecil | 2 | dua</pre>
   function perkiraan(){
     var n = SOAL.filter(function(s){ return (s.q||'').trim(); }).length;
     var ul = +document.querySelector('[name="p[ulang]"]').value || 0;
-    var total = n * (ul + 1), maks = Math.floor(total / 8);
-    document.getElementById('perkiraan').innerHTML = 'Bank soal: <b>' + n + '</b> soal · dengan ' + ul + ' kali pengulangan ≈ <b>' + total + '</b> kemunculan soal · cukup untuk sekitar <b>' + maks + ' giliran</b> penuh (8 pemain hidup).' +
-      (n < 8 ? ' <span style="color:#d64545">Minimal 8 soal.</span>' : (maks < 10 ? ' <span style="color:#b98410">Disarankan menambah soal agar pertarungan lebih panjang.</span>' : ''));
+    var maks = n * (ul + 1);
+    document.getElementById('perkiraan').innerHTML = 'Bank soal: <b>' + n + '</b> soal · dengan ' + ul + ' kali pengulangan ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (tiap pemain mendapat ' + n + ' soal berbeda per putaran).' +
+      (n < 8 ? ' <span style="color:#d64545">Minimal 8 soal.</span>' : (n < 16 ? ' <span style="color:#b98410">Disarankan minimal 16–20 soal agar pertarungan cukup panjang.</span>' : ''));
   }
   function buatBaris(s, i){
     var el = document.createElement('div'); el.className = 'lsoal';

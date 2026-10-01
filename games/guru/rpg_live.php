@@ -158,7 +158,7 @@ page_header('Panel wasit', 'guru/game.php');
       });
       h += '</tr>';
     });
-    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Perkiraan: soal cukup untuk ±'+j.perkiraan+' giliran penuh dari bank '+BANK+' soal.</p><p class="small muted" id="cfg-ok"></p>';
+    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Bank '+BANK+' soal ⇒ paling lama '+j.perkiraan+' giliran (tiap giliran 4 soal yang sama untuk kedua tim).</p><p class="small muted" id="cfg-ok"></p>';
     document.getElementById('cfg').innerHTML = h;
     var t = 0;
     function kirim(){
@@ -237,9 +237,9 @@ page_header('Panel wasit', 'guru/game.php');
       '<div class="box"><b id="tmr">–</b>sisa waktu</div>'
       +'<div class="box"><b>'+(fase==='pilih'?k:d)+' / '+n+'</b>'+(fase==='pilih'?'sudah memilih':'sudah menjawab')+'</div>'
       +'<div class="box"><b>'+j.hidup[1]+' vs '+j.hidup[2]+'</b>karakter hidup (Kiri vs Kanan)</div>'
-      +'<div class="box"><b>'+j.soal_sisa+'</b>soal tersisa</div>';
+      +'<div class="box"><b>'+j.soal_sisa+'</b>giliran tersisa (maks.)</div>';
     var info = '';
-    if (j.soal_sisa < Math.max(1, j.hidup[1] + j.hidup[2])) info = '<div class="warn">Soal hampir habis. Jika soal tidak cukup untuk satu giliran penuh, pertandingan berakhir dan pemenang ditentukan dari jumlah karakter hidup, lalu total HP.</div>';
+    if (j.soal_sisa === 0) info = '<div class="warn">Ini giliran terakhir (soal habis). Jika belum ada tim yang tumbang, pemenang ditentukan dari jumlah karakter hidup, lalu total HP.</div>';
     document.getElementById('info').innerHTML = info;
     hashPer('unit', [j.unit, j.st, j.pemain], function(){
       var spect = j.pemain.filter(function(p){ return p.u < 0; });

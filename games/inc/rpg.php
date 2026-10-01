@@ -9,7 +9,7 @@
 //
 //  Satu "giliran" (ronde) berjalan serempak untuk semua karakter yang hidup:
 //    pilih  -> tiap murid memilih skill + target (ada batas waktu, habis waktu = diacak)
-//    soal   -> tiap murid menjawab satu soal (batas waktu mengikuti soal / waktu universal)
+//    soal   -> tiap murid menjawab satu soal (4 soal per giliran, sama untuk kedua tim; durasi mengikuti soal / universal)
 //    hasil  -> server menghitung semua aksi, layar proyektor memainkan animasinya
 // =====================================================
 require_once __DIR__ . '/live.php';   // memakai live_norm, live_acak, live_tx
@@ -191,7 +191,7 @@ function rpg_parse_soal($raw, array $jenis, &$err)
             $out[] = ['t' => 'isian', 'q' => $q, 'j' => $lst, 'w' => $w];
         }
     }
-    if (count($out) < 8) $err[] = 'Minimal harus ada 8 soal (satu giliran memakai satu soal untuk tiap pemain).';
+    if (count($out) < 8) $err[] = 'Minimal harus ada 8 soal.';
     if (count($out) > 500) $err[] = 'Maksimal 500 soal.';
     return $out;
 }
@@ -391,8 +391,7 @@ function rpg_mulai($game, $s)
         $data = json_decode((string)$game['data'], true) ?: [];
         $bank = array_values($data['soal'] ?? []);
         $n = count($bank);
-        $antrian = [];
-        for ($p = 0; $p <= (int)$cfg['ulang']; $p++) $antrian = array_merge($antrian, live_acak($n ? range(0, $n - 1) : []));
+        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n];
         db_q("UPDATE rpg_sesi SET status='pilih', ronde=0, unit=?, soal=?, antrian=?, ptr=0, kejadian='[]', riwayat='[]', pending='' WHERE id=?",
             [json_encode(rpg_buat_unit($cfg)), json_encode($bank, JSON_UNESCAPED_UNICODE), json_encode($antrian), (int)$s['id']]);
         rpg_ronde_baru_dalam((int)$s['id']);
@@ -406,8 +405,7 @@ function rpg_ronde_baru_dalam($sid)
     $units = rpg_units($s);
     $slot = rpg_slot_map($sid);
     $hidup = array_values(array_filter($units, function ($u) { return $u['hp'] > 0; }));
-    $ant = json_decode((string)$s['antrian'], true) ?: [];
-    if ((int)$s['ptr'] + count($hidup) > count($ant)) {
+    if ((int)$s['ronde'] + 1 > rpg_giliran_maks($s)) {
         list($w, $alasan) = rpg_pemenang_akhir($units);
         rpg_selesai_dalam($s, $w, 'soal_habis_' . $alasan);
         return;
@@ -460,10 +458,7 @@ function rpg_mulai_soal($sid)
         $cfg = rpg_cfg_sesi($s);
         $units = rpg_units($s);
         $bank = rpg_bank($s);
-        $ant = json_decode((string)$s['antrian'], true) ?: [];
-        $ptr = (int)$s['ptr'];
         $rows = db_rows('SELECT * FROM rpg_giliran WHERE sesi_id=? AND ronde=? ORDER BY id', [$sid, $s['ronde']]);
-        shuffle($rows);   // pembagian soal acak antar pemain
         $maks = 5;
         foreach ($rows as $g) {
             $u = $units[(int)$g['u']];
@@ -471,7 +466,7 @@ function rpg_mulai_soal($sid)
                 list($sk, $tg) = rpg_pilihan_acak($units, $u);
                 db_q('UPDATE rpg_giliran SET skill=?, target=?, auto=1, dikunci=1 WHERE id=?', [$sk, $tg, $g['id']]);
             }
-            $idx = $ant[$ptr++];
+            $idx = rpg_idx_soal($s, $u, (int)$s['ronde']);
             $it = $bank[$idx];
             $perm = [];
             if ($it['t'] === 'pg') {
@@ -482,8 +477,30 @@ function rpg_mulai_soal($sid)
             $maks = max($maks, $dur);
             db_q('UPDATE rpg_giliran SET soal_idx=?, perm=?, durasi=? WHERE id=?', [$idx, json_encode($perm), $dur, $g['id']]);
         }
-        db_q("UPDATE rpg_sesi SET status='soal', ptr=?, fase_mulai=?, fase_dur=? WHERE id=?", [$ptr, microtime(true), $maks, $sid]);
+        db_q("UPDATE rpg_sesi SET status='soal', fase_mulai=?, fase_dur=? WHERE id=?", [microtime(true), $maks, $sid]);
     });
+}
+
+// ---------- Pembagian soal (sama seperti Tarik Tambang mode "acak anggota") ----------
+// Tiap giliran hanya 4 soal, SAMA untuk kedua tim; tiap anggota tim mendapat salah satunya dengan penempatan acak.
+// Dasar: persegi Latin siklik => selama N giliran (N = jumlah soal) tiap pemain mendapat N soal berbeda, jadi tidak ada
+// soal yang muncul dua kali pada pemain yang sama. Setelah N giliran = satu putaran; pengulangan (reset) memulai
+// putaran baru dengan acakan baru. Total giliran = N x (pengulangan + 1).
+function rpg_antrian($s) { $a = json_decode((string)$s['antrian'], true); return is_array($a) ? $a : ['seed' => 1, 'n' => 1]; }
+function rpg_giliran_maks($s)
+{
+    $a = rpg_antrian($s);
+    $cfg = rpg_cfg_sesi($s);
+    return max(1, (int)$a['n']) * ((int)$cfg['ulang'] + 1);
+}
+function rpg_idx_soal($s, array $u, $r)
+{
+    $a = rpg_antrian($s);
+    $n = max(1, (int)$a['n']);
+    $pass = intdiv($r - 1, $n);
+    $q = ($r - 1) % $n + 1;
+    $pos = (int)array_search($u['peran'], rpg_peran_list(), true);
+    return live_anggota_idx($a['seed'] . '.' . $pass, $n, 4, (int)$u['tim'], $pos, $q);
 }
 
 // Murid memilih
@@ -745,9 +762,9 @@ function rpg_total_ms($s, $cfg)
 }
 
 // Perkiraan giliran yang masih bisa dimainkan dari sisa soal (jika semua masih hidup)
-function rpg_perkiraan_ronde($bankN, $ulang, $hidup = 8)
+function rpg_perkiraan_ronde($bankN, $ulang)
 {
-    return $hidup > 0 ? intdiv($bankN * ($ulang + 1), $hidup) : 0;
+    return $bankN * ($ulang + 1);
 }
 
 function rpg_peringkat($sid, $maks = 5)

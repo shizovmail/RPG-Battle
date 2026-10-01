@@ -51,7 +51,7 @@ Game Tarik Tambang dan template lain tidak terpengaruh. Menghapus game akan ikut
   menggantikan pemain yang HP-nya bermasalah (**Ganti pemain**, kapan saja).
 * **Satu giliran** (serempak untuk semua karakter yang hidup):
   1. **Pilih** — murid memilih skill (3 pilihan) dan target di HP. Waktu habis ⇒ skill & target **diacak**.
-  2. **Soal** — setelah semua memilih, tiap murid mendapat *satu soal* (durasi mengikuti soal, atau durasi universal).
+  2. **Soal** — setelah semua memilih, tiap murid mendapat *satu soal*. Seperti Tarik Tambang (mode "acak anggota"): tiap giliran hanya **4 soal yang sama untuk kedua tim**, diacak ke tiap anggota tim. Pemain **tidak akan mendapat soal yang sama lagi** sampai soal habis dan diulang (reset). Durasi mengikuti soal, atau durasi universal.
      Benar ⇒ skill berhasil; salah / waktu habis ⇒ karakter **tertunduk kecewa**, skill gagal (cooldown tetap terpakai).
   3. **Aksi** — server menghitung semuanya, layar proyektor memainkan animasi, lalu giliran berikutnya.
 * **Tank & Healer** memilih anggota tim sendiri (termasuk diri sendiri) untuk skill utamanya; **Assassin & Mage**
@@ -88,9 +88,10 @@ selisih Attack − Defend selalu positif (serangan dasar Tank terhadap Tank pun 
 
 ### Kebutuhan soal
 
-Tiap giliran memakai **satu soal per karakter hidup** (sampai 8). Bank minimal 8 soal, tetapi disarankan **≥ 40–60 soal**
-dan pengulangan 1–2 kali; formulir menampilkan perkiraan jumlah giliran. Bila soal tidak cukup untuk satu giliran
-penuh, pertandingan berakhir dengan aturan "soal habis" di atas.
+Tiap giliran memakai **4 soal** (sama untuk kedua tim). Selama satu putaran soal, setiap pemain mendapat soal yang selalu berbeda
+(persegi Latin, sama seperti mode "acak anggota" Tarik Tambang). Giliran maksimum = jumlah soal × (pengulangan + 1);
+bank 20–40 soal sudah cukup untuk pertandingan seru. Bila belum ada tim yang tumbang setelah soal habis, berlaku aturan
+"soal habis" di atas.
 
 ## Pengujian yang sudah dilakukan
 
