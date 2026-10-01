@@ -1,0 +1,21 @@
+{
+  "kode": "rpg_battle",
+  "nama": "RPG Battle 4 vs 4 (Tim vs Tim)",
+  "ikon": "⚔️",
+  "urutan": 9,
+  "deskripsi": "Pertarungan RPG dua tim (4 vs 4: Tank, Assassin, Mage, Healer). Murid memilih skill & target dari HP, lalu menjawab soal agar skill berhasil. Guru jadi wasit, pertarungan beranimasi di layar proyektor.",
+  "petunjuk": "Buat bank soal (minimal 8, makin banyak makin lama permainannya). Tiap soal punya durasi sendiri (bawaan 15 detik). Setelah disimpan, buka panel wasit untuk mengatur 8 pemain dan memulai pertandingan.",
+  "tag": "Live · 4 vs 4 · butuh layar proyektor",
+  "mode": "soal",
+  "live": true,
+  "form": "buat_rpg.php",
+  "panel": "rpg_live.php",
+  "layar": "rpg_layar.php",
+  "grup": "live_rpg_battle",
+  "skor": true,
+  "min_soal": 8,
+  "max_soal": 500,
+  "jumlah_opsi": 4,
+  "min_opsi": 2,
+  "pengaturan": []
+}
