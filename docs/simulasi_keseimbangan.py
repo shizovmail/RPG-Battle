@@ -10,13 +10,14 @@ Opsi: python3 docs/simulasi_keseimbangan.py <giliran_maks> <jumlah_simulasi>
 import random, statistics as st, sys
 
 ROLES = ['tank', 'assassin', 'mage', 'healer']
-CD = {'tank': {'s1': 0, 's2': 2}, 'assassin': {'s1': 2, 's2': 3}, 'mage': {'s1': 3, 's2': 2}, 'healer': {'s1': 2, 's2': 3}}
+CD = {'tank': {'s1': 0, 's2': 2}, 'assassin': {'s1': 2, 's2': 3}, 'mage': {'s1': 3, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
 BASIC, STRIKE, HEAL_ALL = 0.5, 2.75, 0.55
+HEAL = 35
 STAT = {  # sama dengan rpg_stat_bawaan() di PHP
     'tank': dict(hp=300, atk=24, df=12, heal=0),
     'assassin': dict(hp=140, atk=75, df=5, heal=0),
     'mage': dict(hp=160, atk=55, df=6, heal=0),
-    'healer': dict(hp=170, atk=30, df=8, heal=40),
+    'healer': dict(hp=170, atk=30, df=8, heal=HEAL),
 }
 
 
@@ -50,15 +51,17 @@ def main_satu(S, p, seed, maks):
                 u['kut'] = 0
                 if ok and rnd.random() < .75: ok = False
             acts.append([u, sk, tg, ok])
-        shield, stealth, curses = {}, set(), []
+        shield, stealth, curses, guard = {}, set(), [], {}
         for u, sk, tg, ok in acts:  # cooldown dipakai walau gagal; Bayangan tanpa cooldown di tahap 1
             r = u['r']
             if sk in ('s1', 's2') and not (r == 'assassin' and sk == 's2'): u['cd'][sk] = CD[r][sk] + 1
             if sk == 'strike': u['siap'] = 0; u['cd']['s2'] = CD['assassin']['s2'] + 1
             if not ok: continue
-            if r == 'tank' and sk == 's1': shield[id(tg)] = min(shield.get(id(tg), 1), .10)
+            if r == 'tank' and sk == 's1':
+                if tg is u: shield[id(u)] = min(shield.get(id(u), 1), .10)
+                else: guard[id(tg)] = u          # tank berdiri di depan sekutu: sekutu 0 damage, tank terima 10%
             if r == 'tank' and sk == 's2':
-                for x in A(u['t']): shield[id(x)] = min(shield.get(id(x), 1), .30)
+                for x in A(u['t']): shield[id(x)] = min(shield.get(id(x), 1), .20)
             if r == 'assassin' and sk == 's2': stealth.add(id(u)); u['siap'] = 1
             if r == 'mage' and sk == 's2': curses.append(tg)
         for u, sk, tg, ok in acts:
@@ -76,7 +79,10 @@ def main_satu(S, p, seed, maks):
             elif r == 'mage' and sk == 's1': dm = [(x, 1.0) for x in A(1 - u['t'])]
             for x, m in dm:
                 if id(x) in stealth: continue
-                d = max(1, round(u['atk'] * m - x['df'])); d = max(1, round(d * shield.get(id(x), 1)))
+                d = max(1, round(u['atk'] * m - x['df']))
+                if id(x) in guard and guard[id(x)]['hp'] > 0:
+                    x = guard[id(x)]; d = max(1, round(d * .10))
+                else: d = max(1, round(d * shield.get(id(x), 1)))
                 e = min(d, x['hp']); x['hp'] -= e; dd[r] += e
         for x in curses: x['kut'] = 1
         for u in U:

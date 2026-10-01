@@ -295,7 +295,7 @@ function rpg_gstate($game, $s)
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'pemenang' => (int)$s['pemenang'], 'akhir' => rpg_akhir_info($s),
         'n_riw' => count(json_decode((string)$s['riwayat'], true) ?: []),
-        'perkiraan' => rpg_perkiraan_ronde($bank, (int)$cfg['ulang']),
+        'perkiraan' => rpg_maks_dari_data(json_decode((string)$game['data'], true) ?: [], (int)$cfg['ulang']),
     ];
     if (in_array($s['status'], ['hasil', 'selesai'], true) || ($s['status'] === 'jeda' && $s['sblm'] === 'hasil')) {
         $r['kejadian'] = json_decode((string)$s['kejadian'], true) ?: [];
@@ -350,7 +350,7 @@ function rpg_murid_state($s, $p)
             } elseif ($fase === 'hasil') {
                 $dmg = 0; $heal = 0;
                 foreach (json_decode((string)$s['kejadian'], true) ?: [] as $e) {
-                    if ($e['k'] === 'serang') foreach ($e['t'] as $t) if ((int)$t['u'] === $ui) $dmg += (int)$t['d'];
+                    if ($e['k'] === 'serang') foreach ($e['t'] as $t) { if ((int)$t['u'] === $ui) $dmg += (int)$t['d']; if (!empty($t['tk']) && (int)$t['tk']['u'] === $ui) $dmg += (int)$t['tk']['d']; }
                     if ($e['k'] === 'heal') foreach ($e['h'] as $t) if ((int)$t['u'] === $ui) $heal += (int)$t['n'];
                 }
                 $r['hasil'] = ['sukses' => (bool)$g['sukses'], 'skill' => $g['skill'], 'auto' => (bool)$g['auto'], 'dmg' => $dmg, 'heal' => $heal];

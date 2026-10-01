@@ -63,12 +63,12 @@ Game Tarik Tambang dan template lain tidak terpengaruh. Menghapus game akan ikut
 
 | Peran | Skill 1 | Skill 2 | Serangan dasar |
 |---|---|---|---|
-| 🛡️ Tank | **Perisai Pelindung**: 1 anggota, damage lawan yang masuk 10% · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk 30% · cooldown 2 | 50% Attack |
+| 🛡️ Tank | **Pasang Badan**: pindah ke depan 1 anggota (boleh diri sendiri); anggota itu **0 damage**, tank menerima **10%** damage tersebut · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk 20% · cooldown 2 | 50% Attack |
 | 🗡️ Assassin | **Tusukan Mematikan**: 1 lawan, 100% Attack · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 275% Attack** (harus benar 2× berturut-turut) · cooldown 3 | 50% Attack |
 | 🔮 Mage | **Hujan Meteor** (Kiri, merah) / **Badai Es** (Kanan, biru muda): semua lawan, 100% Attack · cooldown 3 | **Kutukan**: 1 lawan, giliran berikutnya 75% gagal walau benar; **lawan tidak tahu siapa** · cooldown 2 | 50% Attack |
-| ✨ Healer | **Penyembuhan**: 1 anggota, pulih sebesar stat Heal · cooldown 2 | **Hujan Cahaya**: semua anggota, 55% Heal per orang · cooldown 3 | 50% Attack |
+| ✨ Healer | **Penyembuhan**: 1 anggota, pulih sebesar stat Heal · tanpa cooldown | **Hujan Cahaya**: semua anggota, 55% Heal per orang · cooldown 3 | 50% Attack |
 
-* Damage = `(Attack × pengali) − Defend lawan`, minimal 1. Perisai tank mengalikan hasilnya (10% / 30%).
+* Damage = `(Attack × pengali) − Defend lawan`, minimal 1. Benteng Tim mengalikan hasilnya (20%); Pasang Badan memindahkan damage ke tank (10%).
 * Cooldown "2" = tidak bisa dipakai 2 giliran berikutnya, giliran ke-3 bisa lagi.
 * Semua aksi dalam satu giliran dihitung serempak: perisai/bayangan/kutukan → pemulihan → serangan (urutan acak).
 * Karakter yang HP-nya 0 **pingsan** (terbaring) dan tidak ikut giliran berikutnya.
@@ -80,7 +80,7 @@ Game Tarik Tambang dan template lain tidak terpengaruh. Menghapus game akan ikut
 | Tank | 300 | 24 | 12 | – |
 | Assassin | 140 | 75 | 5 | – |
 | Mage | 160 | 55 | 6 | – |
-| Healer | 170 | 30 | 8 | 40 |
+| Healer | 170 | 30 | 8 | 35 |
 
 Dipilih lewat simulasi ribuan pertandingan (`docs/simulasi_keseimbangan.py`): kedua sisi menang ±50% (cermin),
 urutan damage Assassin > Mage > Healer > Tank sesuai rancangan, Tank sangat kokoh tetapi hampir tidak melukai, dan
@@ -96,7 +96,7 @@ bank 20–40 soal sudah cukup untuk pertandingan seru. Bila belum ada tim yang t
 ## Pengujian yang sudah dilakukan
 
 * Simulasi game penuh via API (8–10 murid virtual) sampai ada pemenang.
-* 43 pemeriksaan aturan (cooldown, perisai 10%/30%, damage minimal 1, bayangan & serangan 275%, kutukan 75% & tersembunyi,
+* 43 pemeriksaan aturan (cooldown, pasang badan 0%/10%, benteng 20%, damage minimal 1, bayangan & serangan 275%, kutukan 75% & tersembunyi,
   heal tunggal/semua, tumbang semua/seri, soal habis → hidup/HP/seri, auto-acak saat waktu habis, durasi soal vs universal,
   pergantian pemain).
 * Tangkapan layar proyektor, panel wasit, formulir, dan HP murid pada setiap tahap (Chromium).

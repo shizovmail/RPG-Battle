@@ -261,13 +261,13 @@ page_header('Panel wasit', 'guru/game.php');
     function n(i){ return esc(nm(j, i)); }
     var u = e.u;
     if (e.k === 'gagal') return '<span class="gagal">'+n(u)+' gagal menjalankan skill (jawaban salah / waktu habis / kutukan).</span>';
-    if (e.k === 'perisai') return n(u)+' memasang '+(e.m==='semua'?'<b>Benteng Tim</b> (damage masuk 30%)':'<b>Perisai Pelindung</b> untuk '+n(e.t)+' (damage masuk 10%)')+'.';
+    if (e.k === 'perisai') return n(u)+(e.m==='semua'?' memasang <b>Benteng Tim</b> (damage masuk 20%).':(e.t===u?' melindungi dirinya sendiri (damage masuk 10%).':' <b>pasang badan</b> di depan '+n(e.t)+' (sekutu 0 damage, tank menerima 10%).'));
     if (e.k === 'bayangan') return n(u)+' menghilang ke dalam <b>Bayangan</b> (tak bisa diserang giliran ini).';
     if (e.k === 'kutuk') return n(u)+' melempar <b>Kutukan</b> ke tim lawan (target dirahasiakan dari murid).';
     if (e.k === 'heal') return '<span class="heal">'+n(u)+' memakai '+(e.m==='semua'?'Hujan Cahaya':'Penyembuhan')+': '+e.h.map(function(h){ return esc(nm(j,h.u))+' +'+h.n; }).join(', ')+'</span>';
     if (e.k === 'serang') {
       var s = {basic:'Serangan Dasar', s1:'skill 1', strike:'Serangan Bayangan 275%'}[e.s] || e.s;
-      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bl?' <b>meleset (bayangan)</b>':(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':''))); }).join(', ');
+      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bl?' <b>meleset (bayangan)</b>':(t.gd?' <b>ditangkis</b> '+n(t.tk.u)+' <span class="dmg">−'+(t.tk.r!=null?t.tk.r:t.tk.d)+'</span>'+(t.tk.ko?' 💫':''):(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':'')))); }).join(', ');
     }
     if (e.k === 'ko') return '💫 <b>'+n(u)+' pingsan!</b>';
     return '';

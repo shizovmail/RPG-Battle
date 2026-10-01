@@ -217,7 +217,7 @@
       return;
     }
     var kat = {
-      tank: 'Pelindung tim. Lindungi teman agar damage lawan hanya masuk 10%–30%.',
+      tank: 'Pelindung tim. Pasang badan di depan teman (ia 0 damage) atau bentengi seluruh tim.',
       assassin: 'Penyerang tunggal paling mematikan. Bersembunyi lalu serang dengan damage 275%.',
       mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
       healer: 'Penyembuh tim. Pulihkan HP temanmu.'
@@ -295,7 +295,7 @@
       tampil(kepala(j) + '<div class="panel"><div class="big">📨</div><h2>Jawaban terkirim</h2><p>Tunggu pemain lain selesai. Lihat layar guru!</p></div>');
       return;
     }
-    var q = j.soal, h = kepala(j) + top + '<div class="info">Jawab dengan benar agar skillmu berhasil. Salah atau waktu habis = skill gagal.</div><div class="q">' + esc(q.q) + '</div>';
+    var q = j.soal, h = kepala(j) + top + '<div class="info">Jawab dengan benar agar skillmu berhasil. Salah atau waktu habis = skill gagal.' + (q.kat ? ' <b>Soal kategori ' + PERAN[q.kat][0] + '</b>' : '') + '</div><div class="q">' + esc(q.q) + '</div>';
     if (q.t === 'pg') {
       h += '<div class="opsi">' + q.o.map(function (t, i) { return '<button class="op" data-i="' + i + '"><b>' + 'ABCD'.charAt(i) + '</b><span>' + esc(t) + '</span></button>'; }).join('') + '</div>';
     } else {

@@ -18,8 +18,8 @@ const RPG_BASIC = 0.5;        // serangan dasar = 50% attack
 const RPG_AOE = 1.0;          // skill 1 mage (area) = 100% attack
 const RPG_ASSASSIN_1 = 1.0;   // skill 1 assassin = 100% attack, 1 target
 const RPG_STRIKE = 2.75;      // serangan bayangan assassin = 275% attack
-const RPG_LINDUNG_1 = 0.10;   // tank melindungi 1 anggota: damage masuk 10%
-const RPG_LINDUNG_SEMUA = 0.30; // tank melindungi semua: damage masuk 30%
+const RPG_LINDUNG_1 = 0.10;   // tank pasang badan untuk 1 anggota: anggota 0 damage, tank menerima 10% dari damage itu
+const RPG_LINDUNG_SEMUA = 0.20; // Benteng Tim: semua anggota menerima 20%
 const RPG_HEAL_SEMUA = 0.55;  // heal semua = 55% heal satu anggota (per anggota)
 const RPG_KUTUK_GAGAL = 75;   // peluang (%) jawaban benar dianggap gagal saat dikutuk
 
@@ -115,7 +115,7 @@ function rpg_stat_bawaan()
         'tank'     => ['hp' => 300, 'atk' => 24, 'def' => 12, 'heal' => 0],
         'assassin' => ['hp' => 140, 'atk' => 75, 'def' => 5,  'heal' => 0],
         'mage'     => ['hp' => 160, 'atk' => 55, 'def' => 6,  'heal' => 0],
-        'healer'   => ['hp' => 170, 'atk' => 30, 'def' => 8,  'heal' => 40],
+        'healer'   => ['hp' => 170, 'atk' => 30, 'def' => 8,  'heal' => 35],
     ];
 }
 
@@ -149,7 +149,7 @@ function rpg_cfg_bersih($raw)
 }
 
 // ---------- Soal ----------
-function rpg_parse_soal($raw, array $jenis, &$err)
+function rpg_parse_soal($raw, array $jenis, &$err, $mode = 'biasa')
 {
     $err = [];
     $out = [];
@@ -161,6 +161,7 @@ function rpg_parse_soal($raw, array $jenis, &$err)
         if (!in_array($t, $jenis, true)) $t = $jenis[0] ?? 'pg';
         $w = isset($row['w']) && $row['w'] !== '' ? (int)$row['w'] : 15;
         $w = max(5, min(180, $w));
+        $kat = (string)($row['k'] ?? '');
         $no = count($out) + 1;
         if ($t === 'pg') {
             $b = isset($row['b']) ? (int)$row['b'] : -1;
@@ -175,7 +176,7 @@ function rpg_parse_soal($raw, array $jenis, &$err)
             if ($q === '') $err[] = "Soal $no: pertanyaan masih kosong.";
             if (count($opsi) < 2) $err[] = "Soal $no: isi minimal 2 pilihan jawaban.";
             elseif ($benar < 0) $err[] = "Soal $no: tandai jawaban yang benar (tidak boleh pilihan kosong).";
-            $out[] = ['t' => 'pg', 'q' => $q, 'o' => $opsi, 'b' => max(0, $benar), 'w' => $w];
+            $out[] = ['t' => 'pg', 'q' => $q, 'o' => $opsi, 'b' => max(0, $benar), 'w' => $w] + ($mode === 'kategori' ? ['k' => $kat] : []);
         } else {
             $j = $row['j'] ?? [];
             if (is_string($j)) $j = explode('|', $j);
@@ -188,10 +189,15 @@ function rpg_parse_soal($raw, array $jenis, &$err)
             if ($q === '' && !$lst) continue;
             if ($q === '') $err[] = "Soal $no: pertanyaan masih kosong.";
             if (!$lst) $err[] = "Soal $no: isi jawaban singkat yang benar.";
-            $out[] = ['t' => 'isian', 'q' => $q, 'j' => $lst, 'w' => $w];
+            $out[] = ['t' => 'isian', 'q' => $q, 'j' => $lst, 'w' => $w] + ($mode === 'kategori' ? ['k' => $kat] : []);
         }
     }
-    if (count($out) < 8) $err[] = 'Minimal harus ada 8 soal.';
+    if ($mode === 'kategori') {
+        foreach (rpg_peran_list() as $r) {
+            $c = count(array_filter($out, function ($x) use ($r) { return ($x['k'] ?? '') === $r; }));
+            if ($c < 4) $err[] = 'Kategori ' . rpg_peran_info()[$r]['nama'] . ' baru berisi ' . $c . ' soal; minimal 4 soal per kategori.';
+        }
+    } elseif (count($out) < 8) $err[] = 'Minimal harus ada 8 soal.';
     if (count($out) > 500) $err[] = 'Maksimal 500 soal.';
     return $out;
 }
@@ -205,16 +211,16 @@ function rpg_skill_katalog($peran, $tim = 1)
     switch ($peran) {
         case 'tank':
             return [
-                ['id' => 's1', 'nama' => 'Perisai Pelindung', 'ikon' => '🛡️', 'tgt' => 'sekutu', 'cd' => 0,
-                    'desc' => 'Lindungi 1 anggota tim (boleh diri sendiri): damage lawan yang masuk hanya 10%. Tanpa cooldown.'],
+                ['id' => 's1', 'nama' => 'Pasang Badan', 'ikon' => '🛡️', 'tgt' => 'sekutu', 'cd' => 0,
+                    'desc' => 'Pindah ke depan 1 anggota tim dan tangkis serangan untuknya: anggota itu TIDAK menerima damage, kamu menerima 10% dari damage itu. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Benteng Tim', 'ikon' => '🏰', 'tgt' => 'tidak', 'cd' => 2,
-                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 30%. Cooldown 2 giliran.'],
+                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 20%. Cooldown 2 giliran.'],
                 $basic,
             ];
         case 'healer':
             return [
-                ['id' => 's1', 'nama' => 'Penyembuhan', 'ikon' => '💚', 'tgt' => 'sekutu', 'cd' => 2,
-                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri). Cooldown 2 giliran.'],
+                ['id' => 's1', 'nama' => 'Penyembuhan', 'ikon' => '💚', 'tgt' => 'sekutu', 'cd' => 0,
+                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri) sebesar stat Heal. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Hujan Cahaya', 'ikon' => '🌟', 'tgt' => 'tidak', 'cd' => 3,
                     'desc' => 'Pulihkan HP SEMUA anggota tim, lebih sedikit dari penyembuhan tunggal. Cooldown 3 giliran.'],
                 $basic,
@@ -391,7 +397,15 @@ function rpg_mulai($game, $s)
         $data = json_decode((string)$game['data'], true) ?: [];
         $bank = array_values($data['soal'] ?? []);
         $n = count($bank);
-        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n];
+        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n, 'mode' => 'biasa'];
+        if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
+            $antrian['mode'] = 'kategori'; $antrian['kat'] = [];
+            foreach (rpg_peran_list() as $r) {
+                $antrian['kat'][$r] = [];
+                foreach ($bank as $i => $x) if (($x['k'] ?? '') === $r) $antrian['kat'][$r][] = $i;
+            }
+            $antrian['n'] = min(array_map('count', $antrian['kat']));
+        }
         db_q("UPDATE rpg_sesi SET status='pilih', ronde=0, unit=?, soal=?, antrian=?, ptr=0, kejadian='[]', riwayat='[]', pending='' WHERE id=?",
             [json_encode(rpg_buat_unit($cfg)), json_encode($bank, JSON_UNESCAPED_UNICODE), json_encode($antrian), (int)$s['id']]);
         rpg_ronde_baru_dalam((int)$s['id']);
@@ -487,6 +501,17 @@ function rpg_mulai_soal($sid)
 // soal yang muncul dua kali pada pemain yang sama. Setelah N giliran = satu putaran; pengulangan (reset) memulai
 // putaran baru dengan acakan baru. Total giliran = N x (pengulangan + 1).
 function rpg_antrian($s) { $a = json_decode((string)$s['antrian'], true); return is_array($a) ? $a : ['seed' => 1, 'n' => 1]; }
+// giliran maksimum dari data game (dipakai formulir/API untuk perkiraan)
+function rpg_maks_dari_data(array $data, $ulang)
+{
+    $bank = array_values($data['soal'] ?? []);
+    $n = count($bank);
+    if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
+        $n = PHP_INT_MAX;
+        foreach (rpg_peran_list() as $r) $n = min($n, count(array_filter($bank, function ($x) use ($r) { return ($x['k'] ?? '') === $r; })));
+    }
+    return $n * ((int)$ulang + 1);
+}
 function rpg_giliran_maks($s)
 {
     $a = rpg_antrian($s);
@@ -499,6 +524,12 @@ function rpg_idx_soal($s, array $u, $r)
     $n = max(1, (int)$a['n']);
     $pass = intdiv($r - 1, $n);
     $q = ($r - 1) % $n + 1;
+    if (($a['mode'] ?? 'biasa') === 'kategori') {
+        // tiap kategori punya urutan acak sendiri; kedua tim mendapat soal kategori yang sama sesuai perannya
+        $list = $a['kat'][$u['peran']] ?? [];
+        $perm = live_perm(count($list), crc32('k' . $a['seed'] . '.' . $u['peran'] . '.' . $pass));
+        return $list[$perm[$q - 1]];
+    }
     $pos = (int)array_search($u['peran'], rpg_peran_list(), true);
     return live_anggota_idx($a['seed'] . '.' . $pass, $n, 4, (int)$u['tim'], $pos, $q);
 }
@@ -527,11 +558,12 @@ function rpg_soal_untuk($s, array $g)
     $bank = rpg_bank($s);
     $it = $bank[(int)$g['soal_idx']] ?? null;
     if (!$it) return null;
-    if ($it['t'] === 'isian') return ['t' => 'isian', 'q' => $it['q']];
+    $kat = !empty($it['k']) ? ['kat' => $it['k']] : [];
+    if ($it['t'] === 'isian') return ['t' => 'isian', 'q' => $it['q']] + $kat;
     $perm = json_decode((string)$g['perm'], true) ?: [];
     $o = [];
     foreach ($perm as $k) $o[] = $it['o'][$k];
-    return ['t' => 'pg', 'q' => $it['q'], 'o' => $o];
+    return ['t' => 'pg', 'q' => $it['q'], 'o' => $o] + $kat;
 }
 
 function rpg_nilai($s, array $g, $jawab)
@@ -587,7 +619,8 @@ function rpg_hitung_dalam($s)
 
     $dipakai = [];            // skill yang dipakai (cooldown) : i => [id, ...]
     $bayang = [];             // assassin yang sedang bayangan giliran ini
-    $lindung = [];            // i => pengali damage terkecil
+    $lindung = [];            // i => pengali damage terkecil (Benteng Tim / tank melindungi dirinya)
+    $guard = [];              // sekutu => indeks tank yang pasang badan untuk dia
     $kutukBaru = [];
     $st1 = []; $st2 = []; $st3 = [];
 
@@ -601,7 +634,8 @@ function rpg_hitung_dalam($s)
         if (!$ok) { $st2[] = ['k' => 'gagal', 'u' => $i, 's' => $sk]; continue; }
         if ($u['peran'] === 'tank' && $sk === 's1') {
             $t = $a['target'];
-            $lindung[$t] = min($lindung[$t] ?? 1, RPG_LINDUNG_1);
+            if ($t === $i) $lindung[$t] = min($lindung[$t] ?? 1, RPG_LINDUNG_1);   // melindungi diri sendiri
+            else $guard[$t] = $i;
             $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'satu', 't' => $t];
         } elseif ($u['peran'] === 'tank' && $sk === 's2') {
             foreach ($units as $x) if ($x['tim'] === $u['tim'] && $x['hp'] > 0) $lindung[$x['i']] = min($lindung[$x['i']] ?? 1, RPG_LINDUNG_SEMUA);
@@ -654,6 +688,16 @@ function rpg_hitung_dalam($s)
             if (!empty($bayang[$ti])) { $t[] = ['u' => $ti, 'd' => 0, 'hp' => $tu['hp'], 'bl' => 1]; continue; }
             if ($tu['hp'] <= 0) { $t[] = ['u' => $ti, 'd' => 0, 'hp' => 0, 'ko' => 1, 'sdh' => 1]; continue; }
             $d = max(1, (int)round($u['atk'] * $mult - $tu['def']));
+            if (isset($guard[$ti]) && $units[$guard[$ti]]['hp'] > 0) {   // tank menangkis: sasaran 0 damage, tank terima 10%
+                $gi = $guard[$ti];
+                $dt = max(1, (int)round($d * RPG_LINDUNG_1));
+                $real = min($dt, $units[$gi]['hp']);
+                $units[$gi]['hp'] -= $real;
+                $tk = ['u' => $gi, 'd' => $real, 'r' => $dt, 'hp' => $units[$gi]['hp']];
+                if ($units[$gi]['hp'] <= 0) $tk['ko'] = 1;
+                $t[] = ['u' => $ti, 'd' => 0, 'hp' => $tu['hp'], 'gd' => 1, 'tk' => $tk];
+                continue;
+            }
             $pr = $lindung[$ti] ?? 1;
             if ($pr < 1) $d = max(1, (int)round($d * $pr));
             $units[$ti]['hp'] = max(0, $tu['hp'] - $d);

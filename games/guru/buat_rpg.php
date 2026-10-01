@@ -12,6 +12,7 @@ $kelasIdSelected = !empty($data['identitas']['kelas_id']) ? (int)$data['identita
 $jenis = $data['jenis'] ?? ['pg'];
 $soalList = $data['soal'] ?? [];
 $cfg = rpg_cfg_bersih($data['pengaturan'] ?? []);
+$modeSoal = ($data['mode_soal'] ?? 'biasa') === 'kategori' ? 'kategori' : 'biasa';
 $peranInfo = rpg_peran_info();
 $bawaan = rpg_stat_bawaan();
 
@@ -29,12 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $jenis = array_values(array_intersect((array)($_POST['jenis'] ?? []), ['pg', 'isian']));
     if (!$jenis) { $errors[] = 'Pilih minimal satu tipe soal (pilihan ganda dan/atau isian singkat).'; $jenis = ['pg']; }
     $raw = json_decode((string)($_POST['soal_json'] ?? '[]'), true);
-    $soalList = rpg_parse_soal(is_array($raw) ? $raw : [], $jenis, $es);
+    $modeSoal = ($_POST['mode_soal'] ?? 'biasa') === 'kategori' ? 'kategori' : 'biasa';
+    $soalList = rpg_parse_soal(is_array($raw) ? $raw : [], $jenis, $es, $modeSoal);
     $errors = array_merge($errors, $es);
     $cfg = rpg_cfg_bersih($_POST['p'] ?? []);
 
     if (!$errors) {
-        $new = ['mode' => 'soal', 'jenis' => $jenis, 'soal' => $soalList, 'pengaturan' => $cfg,
+        $new = ['mode' => 'soal', 'jenis' => $jenis, 'mode_soal' => $modeSoal, 'soal' => $soalList, 'pengaturan' => $cfg,
             'identitas' => ['cara' => $kelasValid ? 'kelas' : 'bebas', 'kelas_id' => $kelasValid ? $kelasIdSelected : null]];
         $json = json_encode($new, JSON_UNESCAPED_UNICODE);
         if ($game) {
@@ -108,7 +110,13 @@ Bilangan prima terkecil | 2 | dua</pre>
         </div>
       </details>
     </div>
-    <p class="small muted">Setiap giliran hanya muncul <b>4 soal yang sama untuk kedua tim</b>; soalnya diacak ke tiap anggota tim. Seorang pemain <b>tidak akan menerima soal yang sama lagi</b> sampai semua soal habis (lalu diulang sesuai pengaturan). Jumlah giliran maksimum = jumlah soal × (pengulangan + 1), jadi <b>20–40 soal</b> sudah cukup untuk pertandingan yang seru.
+    <div class="actions" style="margin-bottom:8px">
+      <label class="check"><input type="radio" name="mode_soal" value="biasa" id="m-biasa" <?= $modeSoal === 'biasa' ? 'checked' : '' ?>> <b>Model biasa</b> — satu bank soal untuk semua peran</label>
+      <label class="check"><input type="radio" name="mode_soal" value="kategori" id="m-kat" <?= $modeSoal === 'kategori' ? 'checked' : '' ?>> <b>Model kategori peran</b> — bank soal terpisah untuk Tank, Assassin, Mage, dan Healer</label>
+    </div>
+    <div class="actions" id="tabs" style="display:none;margin-bottom:8px"></div>
+    <p class="small muted" id="info-kat" style="display:none">Di model ini tiap peran hanya mendapat soal dari kategorinya (soal kategori yang sama muncul untuk peran yang sama di kedua tim). Tiap kategori minimal 4 soal; jumlah giliran maksimum mengikuti kategori yang soalnya paling sedikit. Kategori <b>Fighter</b> (bila dipakai nanti) akan bergiliran memakai keempat kategori ini.</p>
+    <p class="small muted" id="info-biasa">Setiap giliran hanya muncul <b>4 soal yang sama untuk kedua tim</b>; soalnya diacak ke tiap anggota tim. Seorang pemain <b>tidak akan menerima soal yang sama lagi</b> sampai semua soal habis (lalu diulang sesuai pengaturan). Jumlah giliran maksimum = jumlah soal × (pengulangan + 1), jadi <b>20–40 soal</b> sudah cukup untuk pertandingan yang seru.
       Isian singkat dinilai otomatis tanpa memperhatikan huruf besar/kecil, spasi, dan tanda baca (0,5 dianggap sama dengan 0.5).</p>
     <div class="qbox" id="perkiraan"></div>
     <div id="rpg-soal"></div>
@@ -154,8 +162,8 @@ Bilangan prima terkecil | 2 | dua</pre>
     <details style="margin-top:12px"><summary class="small"><b>Daftar skill & pengali damage</b></summary>
       <ul class="small">
         <li><b>Semua peran</b> – Serangan Dasar: 50% Attack ke 1 lawan, tanpa cooldown.</li>
-        <li><b>Tank</b> – Perisai Pelindung (1 anggota, damage masuk 10%, tanpa cooldown); Benteng Tim (semua anggota, damage masuk 30%, cooldown 2).</li>
-        <li><b>Healer</b> – Penyembuhan (1 anggota = Heal penuh, cooldown 2); Hujan Cahaya (semua anggota = 55% Heal, cooldown 3).</li>
+        <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 anggota; anggota itu 0 damage, tank menerima 10% damage tersebut; tanpa cooldown); Benteng Tim (semua anggota, damage masuk 20%, cooldown 2).</li>
+        <li><b>Healer</b> – Penyembuhan (1 anggota = Heal penuh, tanpa cooldown); Hujan Cahaya (semua anggota = 55% Heal, cooldown 3).</li>
         <li><b>Assassin</b> – Tusukan Mematikan (1 lawan, 100% Attack, cooldown 2); Bayangan (tak bisa diserang giliran itu, lalu giliran berikutnya Serangan Bayangan 275% Attack jika benar lagi, cooldown 3).</li>
         <li><b>Mage</b> – Hujan Meteor / Badai Es (semua lawan, 100% Attack, cooldown 3); Kutukan (1 lawan, giliran berikutnya 75% gagal walau benar, tersembunyi dari lawan, cooldown 2).</li>
         <li>Skill yang gagal (jawaban salah / waktu habis) tetap memakai cooldown. Tank &amp; Healer memilih sekutu untuk skill utamanya; Assassin &amp; Mage memilih lawan.</li>
@@ -184,7 +192,17 @@ Bilangan prima terkecil | 2 | dua</pre>
 </style>
 <script>
 (function(){
-  var SOAL = <?= json_encode(array_values($soalList) ?: [['t' => $jenis[0] ?? 'pg', 'q' => '', 'o' => [], 'b' => 0, 'w' => 15]], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  var AWAL = <?= json_encode(array_values($soalList), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+  var PERAN = {tank:'🛡️ Tank', assassin:'🗡️ Assassin', mage:'🔮 Mage', healer:'✨ Healer'}, ORDER = ['tank','assassin','mage','healer'];
+  var MODE = <?= json_encode($modeSoal) ?>, KATAKTIF = 'tank';
+  var KOSONG = function(){ return {t: <?= json_encode($jenis[0] ?? 'pg') ?>, q: '', o: [], b: 0, w: 15}; };
+  var SOAL = [], KAT = {tank:[], assassin:[], mage:[], healer:[]};
+  if (MODE === 'kategori') AWAL.forEach(function(x){ (KAT[x.k] || KAT.tank).push(x); });
+  else SOAL = AWAL;
+  if (!SOAL.length) SOAL = [KOSONG()];
+  ORDER.forEach(function(r){ if (!KAT[r].length) { var k = KOSONG(); KAT[r] = [k]; } });
+  function ARR(){ return MODE === 'kategori' ? KAT[KATAKTIF] : SOAL; }
+  function SEMUA(){ var a = SOAL.slice(); ORDER.forEach(function(r){ a = a.concat(KAT[r]); }); return a; }
   var list = document.getElementById('rpg-soal');
   var cbPg = document.getElementById('j-pg'), cbIs = document.getElementById('j-isian');
   var uid = 0;
@@ -193,14 +211,35 @@ Bilangan prima terkecil | 2 | dua</pre>
   function tipeBawaan(){ return jenisAktif()[0] || 'pg'; }
   function normalisasi(){
     var ja = jenisAktif();
-    SOAL.forEach(function(s){ if (ja.indexOf(s.t) < 0) s.t = ja[0] || 'pg'; if (!s.w) s.w = 15; });
+    SEMUA().forEach(function(s){ if (ja.indexOf(s.t) < 0) s.t = ja[0] || 'pg'; if (!s.w) s.w = 15; });
   }
+  function hitung(arr){ return arr.filter(function(s){ return (s.q||'').trim(); }).length; }
   function perkiraan(){
-    var n = SOAL.filter(function(s){ return (s.q||'').trim(); }).length;
-    var ul = +document.querySelector('[name="p[ulang]"]').value || 0;
-    var maks = n * (ul + 1);
-    document.getElementById('perkiraan').innerHTML = 'Bank soal: <b>' + n + '</b> soal · dengan ' + ul + ' kali pengulangan ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (tiap pemain mendapat ' + n + ' soal berbeda per putaran).' +
-      (n < 8 ? ' <span style="color:#d64545">Minimal 8 soal.</span>' : (n < 16 ? ' <span style="color:#b98410">Disarankan minimal 16–20 soal agar pertarungan cukup panjang.</span>' : ''));
+    var ul = +document.querySelector('[name="p[ulang]"]').value || 0, h, maks, kurang;
+    if (MODE === 'kategori') {
+      var c = ORDER.map(function(r){ return hitung(KAT[r]); }), n = Math.min.apply(null, c); maks = n * (ul + 1);
+      h = 'Soal per kategori: ' + ORDER.map(function(r, i){ return PERAN[r] + ' <b>' + c[i] + '</b>'; }).join(' · ') + ' ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (dibatasi kategori tersedikit, ' + n + ' soal).';
+      kurang = n < 4 ? ' <span style="color:#d64545">Tiap kategori minimal 4 soal.</span>' : (n < 12 ? ' <span style="color:#b98410">Disarankan minimal 12–15 soal per kategori.</span>' : '');
+    } else {
+      var n2 = hitung(SOAL); maks = n2 * (ul + 1);
+      h = 'Bank soal: <b>' + n2 + '</b> soal · dengan ' + ul + ' kali pengulangan ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (tiap pemain mendapat ' + n2 + ' soal berbeda per putaran).';
+      kurang = n2 < 8 ? ' <span style="color:#d64545">Minimal 8 soal.</span>' : (n2 < 16 ? ' <span style="color:#b98410">Disarankan minimal 16–20 soal agar pertarungan cukup panjang.</span>' : '');
+    }
+    document.getElementById('perkiraan').innerHTML = h + kurang;
+  }
+  function tabs(){
+    var el = document.getElementById('tabs');
+    el.style.display = MODE === 'kategori' ? 'flex' : 'none';
+    document.getElementById('info-kat').style.display = MODE === 'kategori' ? 'block' : 'none';
+    document.getElementById('info-biasa').style.display = MODE === 'kategori' ? 'none' : 'block';
+    el.innerHTML = '';
+    ORDER.forEach(function(r){
+      var b = document.createElement('button'); b.type = 'button';
+      b.className = 'btn small' + (KATAKTIF === r ? ' primary' : '');
+      b.textContent = PERAN[r] + ' (' + hitung(KAT[r]) + ')';
+      b.onclick = function(){ KATAKTIF = r; render(); };
+      el.appendChild(b);
+    });
   }
   function buatBaris(s, i){
     var el = document.createElement('div'); el.className = 'lsoal';
@@ -238,19 +277,20 @@ Bilangan prima terkecil | 2 | dua</pre>
     var sel = el.querySelector('[data-t]');
     if (sel) sel.onchange = function(){ s.t = this.value; render(); };
     el.querySelector('[data-del]').onclick = function(){
-      if (SOAL.length <= 1) { alert('Minimal harus ada satu soal.'); return; }
-      SOAL.splice(i,1); render();
+      if (ARR().length <= 1) { alert('Minimal harus ada satu soal.'); return; }
+      ARR().splice(i,1); render();
     };
     return el;
   }
   function render(){
     normalisasi();
     list.innerHTML = '';
-    SOAL.forEach(function(s,i){ list.appendChild(buatBaris(s,i)); });
-    document.getElementById('jml-soal').textContent = '(' + SOAL.length + ')';
+    tabs();
+    ARR().forEach(function(s,i){ list.appendChild(buatBaris(s,i)); });
+    document.getElementById('jml-soal').textContent = MODE === 'kategori' ? '— ' + PERAN[KATAKTIF] + ' (' + ARR().length + ')' : '(' + ARR().length + ')';
     perkiraan();
   }
-  function tambah(s){ SOAL.push(s); }
+  function tambah(s){ ARR().push(s); }
   [cbPg, cbIs].forEach(function(cb){
     cb.onchange = function(){
       if (!cbPg.checked && !cbIs.checked) { cb.checked = true; alert('Pilih minimal satu tipe soal.'); return; }
@@ -265,7 +305,7 @@ Bilangan prima terkecil | 2 | dua</pre>
   document.getElementById('impor-go').onclick = function(){
     var teks = document.getElementById('impor-teks').value.trim(), n = 0, ditolak = 0;
     var w0 = Math.max(5, Math.min(180, +document.getElementById('impor-w').value || 15));
-    var kosong = SOAL.length === 1 && !(SOAL[0].q||'').trim();
+    var kosong = ARR().length === 1 && !(ARR()[0].q||'').trim();
     teks.split(/\n\s*\n/).forEach(function(blok){
       var baris = blok.split('\n').map(function(x){return x.trim();}).filter(Boolean);
       if (!baris.length) return;
@@ -282,7 +322,7 @@ Bilangan prima terkecil | 2 | dua</pre>
         if (o.length >= 2) { tambah({t:'pg', q:q2, o:o, b:benar, j:'', w:w0}); n++; }
       }
     });
-    if (n && kosong) SOAL.shift();
+    if (n && kosong) ARR().shift();
     render();
     alert((n ? n + ' soal ditambahkan.' : 'Tidak ada soal yang terbaca. Periksa formatnya.') + (ditolak ? ' ' + ditolak + ' blok dilewati karena tipe soalnya belum dicentang.' : ''));
     if (n) { document.getElementById('impor-teks').value = ''; this.closest('details').removeAttribute('open'); }
@@ -292,7 +332,13 @@ Bilangan prima terkecil | 2 | dua</pre>
   };
   document.getElementById('form-rpg').addEventListener('submit', function(){
     normalisasi();
-    document.getElementById('soal_json').value = JSON.stringify(SOAL);
+    var out = [];
+    if (MODE === 'kategori') ORDER.forEach(function(r){ KAT[r].forEach(function(x){ x.k = r; out.push(x); }); });
+    else out = SOAL;
+    document.getElementById('soal_json').value = JSON.stringify(out);
+  });
+  [document.getElementById('m-biasa'), document.getElementById('m-kat')].forEach(function(r){
+    r.onchange = function(){ MODE = document.getElementById('m-kat').checked ? 'kategori' : 'biasa'; render(); };
   });
   render();
 })();
