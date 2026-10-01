@@ -104,9 +104,10 @@
   var API = GK.base + 'api_rpg.php';
   var KEY = 'rpg_' + D.id;
   var S = { sesi: 0, p: '', nama: '', key: '', sisa: null, total: 0, t0: 0, pollT: 0, mode: 'cari', final: false, terkirim: false, j: null };
-  var PERAN = { tank: ['Tank', '🛡️'], assassin: ['Assassin', '🗡️'], mage: ['Mage', '🔮'], healer: ['Healer', '✨'] };
-  var WARNA = { 1: { tank: '#f6c400', assassin: '#4b2a78', mage: '#d32f2f', healer: '#f4f4f8' }, 2: { tank: '#8d5a2b', assassin: '#1a1a1f', mage: '#8fd8f5', healer: '#43a85f' } };
-  var TIM = { 1: 'Tim Kiri', 2: 'Tim Kanan' };
+  var PERAN = { tank: ['Tank', '🛡️'], fighter: ['Fighter', '🥊'], assassin: ['Assassin', '🗡️'], mage: ['Mage', '🔮'], healer: ['Healer', '✨'] };
+  var WARNA = { 1: { tank: '#f6c400', fighter: '#8bc34a', assassin: '#4b2a78', mage: '#d32f2f', healer: '#f4f4f8' }, 2: { tank: '#8d5a2b', fighter: '#d84315', assassin: '#1a1a1f', mage: '#8fd8f5', healer: '#43a85f' } };
+  var TIM = { 1: 'Sky Heaven Guardians', 2: 'Dark Earth Warriors' };
+  var TIMS = { 1: 'SKY HEAVEN', 2: 'DARK EARTH' };
 
   function api(a, q, body) {
     var u = API + '?a=' + a + (q ? '&' + q : '');
@@ -133,8 +134,9 @@
   function strip(j) {
     var h = '<div class="strip">';
     [1, 2].forEach(function (t) {
-      h += '<div class="tm"><h4><span>' + TIM[t].toUpperCase() + '</span><span>' + j.hidup[t] + '/4</span></h4>';
-      j.unit.filter(function (u) { return u.tim === t; }).forEach(function (u) {
+      var per = j.unit.filter(function (u) { return u.tim === t; });
+      h += '<div class="tm"><h4><span>' + TIMS[t] + '</span><span>' + j.hidup[t] + '/' + per.length + '</span></h4>';
+      per.forEach(function (u) {
         var p = pct(u.hp, u.mx);
         h += '<div class="u' + (u.hidup ? '' : ' mati') + (u.i === j.aku ? ' aku' : '') + '"><span class="e">' + PERAN[u.peran][1] + '</span><div class="hpb"><i class="' + hpkls(p) + '" style="width:' + p + '%"></i></div></div>';
       });
@@ -218,6 +220,7 @@
     }
     var kat = {
       tank: 'Pelindung tim. Pasang badan di depan teman (ia 0 damage) atau bentengi seluruh tim.',
+      fighter: 'Petarung lincah tangan kosong. Lompat melindungi teman atau lancarkan rentetan pukulan beruntun.',
       assassin: 'Penyerang tunggal paling mematikan. Bersembunyi lalu serang dengan damage 275%.',
       mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
       healer: 'Penyembuh tim. Pulihkan HP temanmu.'
@@ -241,7 +244,7 @@
       + '<div class="skills" id="skills">'
       + j.skill.map(function (s, i) {
         var off = !s.ok;
-        var tg = s.tgt === 'musuh' ? 'pilih lawan' : s.tgt === 'sekutu' ? 'pilih sekutu' : 'tanpa target';
+        var tg = s.tgt === 'musuh' ? 'pilih lawan' : s.tgt === 'sekutu' ? 'pilih sekutu' : s.tgt === 'sekutu_lain' ? 'pilih teman' : 'tanpa target';
         var cd = off ? (s.kunci ? 'terkunci' : 'cooldown ' + s.sisa) : tg;
         return '<button class="sk' + (off ? ' off' : '') + '" data-i="' + i + '"' + (off ? ' disabled' : '') + '><span class="ic">' + s.ikon + '</span><span class="tx"><b>' + esc(s.nama) + '</b><small>' + esc(s.desc) + '</small></span><span class="tg">' + cd + '</span></button>';
       }).join('') + '</div>'

@@ -63,7 +63,7 @@ if (in_array($a, ['gstate', 'riwayat', 'aksi'], true)) {
         $tim = (int)($in['tim'] ?? 0);
         $peran = (string)($in['peran'] ?? '');
         live_tx(function () use ($sid, $p, $tim, $peran) {
-            if ($tim === 0 || !in_array($peran, rpg_peran_list(), true) || !in_array($tim, [1, 2], true)) {
+            if ($tim === 0 || !in_array($peran, rpg_peran_semua(), true) || !in_array($tim, [1, 2], true)) {
                 db_q("UPDATE rpg_pemain SET tim=0, peran='' WHERE id=?", [$p['id']]);
                 return;
             }
@@ -73,12 +73,13 @@ if (in_array($a, ['gstate', 'riwayat', 'aksi'], true)) {
         });
     } elseif ($do === 'acak') {
         if ($s['status'] !== 'lobi') gagal('Peran hanya bisa diatur saat masih di lobi.');
-        live_tx(function () use ($sid) {
+        $jml = rpg_jumlah_unit(rpg_cfg_sesi($s));
+        live_tx(function () use ($sid, $jml) {
             $semua = live_acak(rpg_pemain_semua($sid));
             db_q("UPDATE rpg_pemain SET tim=0, peran='' WHERE sesi_id=?", [$sid]);
             foreach ($semua as $k => $p) {
-                if ($k >= 8) break;
-                db_q('UPDATE rpg_pemain SET tim=?, peran=? WHERE id=?', [intdiv($k, 4) + 1, rpg_peran_list()[$k % 4], $p['id']]);
+                if ($k >= $jml) break;
+                db_q('UPDATE rpg_pemain SET tim=?, peran=? WHERE id=?', [rpg_unit_tim($k), rpg_unit_peran($k), $p['id']]);
             }
         });
     } elseif ($do === 'keluarkan') {
@@ -90,10 +91,10 @@ if (in_array($a, ['gstate', 'riwayat', 'aksi'], true)) {
     } elseif ($do === 'ganti') {
         $i = (int)($in['u'] ?? -1);
         $baru = db_row('SELECT * FROM rpg_pemain WHERE id=? AND sesi_id=?', [(int)($in['p'] ?? 0), $sid]);
-        if ($i < 0 || $i > 7 || !$baru) gagal('Data penggantian tidak valid.');
+        if ($i < 0 || $i >= rpg_jumlah_unit(rpg_cfg_sesi($s)) || !$baru) gagal('Data penggantian tidak valid.');
         $slot = rpg_slot_map($sid);
         if (rpg_unit_idx($baru['tim'], $baru['peran']) >= 0) gagal('Murid pengganti harus penonton (belum punya peran).');
-        $tim = intdiv($i, 4) + 1; $peran = rpg_peran_list()[$i % 4];
+        $tim = rpg_unit_tim($i); $peran = rpg_unit_peran($i);
         live_tx(function () use ($sid, $s, $i, $slot, $baru, $tim, $peran) {
             if (isset($slot[$i])) db_q("UPDATE rpg_pemain SET tim=0, peran='' WHERE id=?", [$slot[$i]['id']]);
             db_q('UPDATE rpg_pemain SET tim=?, peran=? WHERE id=?', [$tim, $peran, $baru['id']]);
@@ -316,7 +317,7 @@ function rpg_murid_state($s, $p)
     $st = $s['status'];
     $r = [
         'ok' => true, 'st' => $st, 'ronde' => (int)$s['ronde'], 'nama' => $p['nama'],
-        'tim' => $ui >= 0 ? intdiv($ui, 4) + 1 : 0, 'peran' => $ui >= 0 ? rpg_peran_list()[$ui % 4] : '', 'aku' => $ui,
+        'tim' => $ui >= 0 ? rpg_unit_tim($ui) : 0, 'peran' => $ui >= 0 ? rpg_unit_peran($ui) : '', 'aku' => $ui,
         'unit' => rpg_unit_tampil($s, $units, $slot, false),
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'sisa' => rpg_sisa_ms($s, $cfg), 'total' => rpg_total_ms($s, $cfg), 'sblm' => $s['sblm'],
@@ -335,6 +336,7 @@ function rpg_murid_state($s, $p)
                 $ada = rpg_skill_tersedia($u);
                 foreach ($ada as &$sk) {
                     $sk['tg'] = rpg_target_sah($units, $u, $sk);
+                    if ($sk['tgt'] !== 'tidak' && !$sk['tg']) { $sk['ok'] = false; $sk['kunci'] = true; }
                 }
                 unset($sk);
                 $r['skill'] = $ada;
@@ -350,7 +352,7 @@ function rpg_murid_state($s, $p)
             } elseif ($fase === 'hasil') {
                 $dmg = 0; $heal = 0;
                 foreach (json_decode((string)$s['kejadian'], true) ?: [] as $e) {
-                    if ($e['k'] === 'serang') foreach ($e['t'] as $t) { if ((int)$t['u'] === $ui) $dmg += (int)$t['d']; if (!empty($t['tk']) && (int)$t['tk']['u'] === $ui) $dmg += (int)$t['tk']['d']; }
+                    if ($e['k'] === 'serang') foreach ($e['t'] as $t) { if ((int)$t['u'] === $ui) $dmg += (int)$t['d']; if (!empty($t['tk']) && (int)$t['tk']['u'] === $ui) $dmg += (int)$t['tk']['d']; if (!empty($t['fgd'])) { if ((int)$t['fgd']['u'] === $ui) $dmg += (int)$t['fgd']['d']; if (!empty($t['fgd']['tk']) && (int)$t['fgd']['tk']['u'] === $ui) $dmg += (int)$t['fgd']['tk']['d']; } }
                     if ($e['k'] === 'heal') foreach ($e['h'] as $t) if ((int)$t['u'] === $ui) $heal += (int)$t['n'];
                 }
                 $r['hasil'] = ['sukses' => (bool)$g['sukses'], 'skill' => $g['skill'], 'auto' => (bool)$g['auto'], 'dmg' => $dmg, 'heal' => $heal];

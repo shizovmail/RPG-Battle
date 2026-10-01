@@ -68,7 +68,7 @@ page_header('Panel wasit', 'guru/game.php');
 </div>
 <div class="card" style="padding:12px 16px">
   <div class="copy-row"><input id="link" value="<?= e($link) ?>" readonly><button class="btn primary" data-copy="#link">Salin link murid</button></div>
-  <p class="small muted" style="margin:6px 0 0">Bank soal: <b><?= $bank ?></b> soal. Murid membuka link/QR ini di HP. Permainan ini <b>4 lawan 4</b>: pilih 8 murid sebagai Tank, Assassin, Mage, dan Healer di tiap tim; murid lain menjadi penonton (bisa menggantikan bila perlu).</p>
+  <p class="small muted" style="margin:6px 0 0">Bank soal: <b><?= $bank ?></b> soal. Murid membuka link/QR ini di HP. Permainan ini <b>4 lawan 4</b> (atau <b>5 lawan 5</b> bila karakter Fighter dihidupkan di pengaturan): pilih murid sebagai Tank, Assassin, Mage, Healer (dan Fighter) di tiap tim; murid lain menjadi penonton (bisa menggantikan bila perlu).</p>
 </div>
 <div id="panel"><div class="card">Memuat…</div></div>
 
@@ -80,9 +80,13 @@ page_header('Panel wasit', 'guru/game.php');
   var LAYAR = <?= json_encode(url('guru/rpg_layar.php?id=' . $g['id'])) ?>;
   var root = document.getElementById('panel');
   var ST = null, keyTampil = '', sisaBase = null, sisaT0 = 0, sibuk = false, lastHash = {}, nRiw = -1, RIW = [];
-  var PERAN = {tank:['Tank','🛡️'], assassin:['Assassin','🗡️'], mage:['Mage','🔮'], healer:['Healer','✨']};
-  var ORDER = ['tank','assassin','mage','healer'];
-  var TIMN = {1:'Kiri', 2:'Kanan'};
+  var PERAN = {tank:['Tank','🛡️'], fighter:['Fighter','🥊'], assassin:['Assassin','🗡️'], mage:['Mage','🔮'], healer:['Healer','✨']};
+  var BASEORD = ['tank','assassin','mage','healer'];                    // urutan indeks unit 0..7 (Fighter = 8 dan 9)
+  var ORDER = ['tank','fighter','assassin','mage','healer'];             // urutan tampil
+  var TIMN = {1:'Sky Heaven Guardians', 2:'Dark Earth Warriors'};
+  function TIMOF(i){ return i < 8 ? (i < 4 ? 1 : 2) : i - 7; }
+  function ROLEOF(i){ return i < 8 ? BASEORD[i % 4] : 'fighter'; }
+  function UIDX(t, r){ return r === 'fighter' ? 8 + t - 1 : (t - 1) * 4 + BASEORD.indexOf(r); }
   var FASE = {pilih:'Murid memilih skill & target', soal:'Murid menjawab soal', hasil:'Animasi hasil giliran', jeda:'Dijeda'};
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -123,7 +127,7 @@ page_header('Panel wasit', 'guru/game.php');
       document.getElementById('b-baru').onclick = function(){ aksi('sesi_baru'); };
     } else if (j.st === 'lobi') {
       root.innerHTML = '<div class="card"><div class="sec-head"><h2>Lobi <span class="muted" id="jml"></span></h2><div class="actions"><button class="btn" id="b-acak">🎲 Acak peran</button><button class="btn danger small" id="b-batal">Batalkan sesi</button></div></div>'
-        +'<div class="cols"><div class="kol t1"><h3>🟡 Tim Kiri</h3><div id="k1"></div></div><div class="kol t2"><h3>🟤 Tim Kanan</h3><div id="k2"></div></div></div>'
+        +'<div class="cols"><div class="kol t1"><h3>🟡 Sky Heaven Guardians</h3><div id="k1"></div></div><div class="kol t2"><h3>🟤 Dark Earth Warriors</h3><div id="k2"></div></div></div>'
         +'<h3 style="margin-top:12px">Murid yang masuk <span class="muted small">(✕ untuk mengeluarkan)</span></h3><div class="pmwrap" id="pm"></div>'
         +'<div id="syarat"></div><div class="actions" style="margin-top:8px"><button class="btn primary big" id="b-mulai">▶ Mulai pertandingan</button></div></div>'
         +'<div class="card"><h2>Pengaturan pertandingan</h2><div id="cfg"></div></div>';
@@ -147,6 +151,7 @@ page_header('Panel wasit', 'guru/game.php');
       +'<label>Durasi menjawab soal<select data-c="sumber_waktu"><option value="soal"'+(c.sumber_waktu==='soal'?' selected':'')+'>Pakai durasi bawaan tiap soal</option><option value="universal"'+(c.sumber_waktu==='universal'?' selected':'')+'>Pakai durasi universal</option></select></label>'
       +'<label>Durasi universal (detik)<input type="number" data-c="waktu_universal" min="5" max="180" value="'+c.waktu_universal+'"></label>'
       +'<label>Pengulangan soal jika soal habis (kali)<input type="number" data-c="ulang" min="0" max="10" value="'+c.ulang+'"></label></div>'
+      +'<label class="check"><input type="checkbox" data-c="pakai_fighter"'+(c.pakai_fighter?' checked':'')+'> <b>Pakai karakter Fighter (5 vs 5)</b> — tiap tim mendapat satu Fighter tambahan</label>'
       +'<label class="check"><input type="checkbox" data-c="lanjut_otomatis"'+(c.lanjut_otomatis?' checked':'')+'> Lanjut otomatis ke giliran berikutnya setelah animasi hasil</label>'
       +'<label class="check"><input type="checkbox" data-c="acak_opsi"'+(c.acak_opsi?' checked':'')+'> Acak posisi pilihan jawaban</label>'
       +'<label class="check"><input type="checkbox" data-c="peringkat"'+(c.peringkat?' checked':'')+'> Tampilkan peringkat murid di akhir</label>'
@@ -158,7 +163,7 @@ page_header('Panel wasit', 'guru/game.php');
       });
       h += '</tr>';
     });
-    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Bank '+BANK+' soal ⇒ paling lama '+j.perkiraan+' giliran (tiap giliran 4 soal yang sama untuk kedua tim).</p><p class="small muted" id="cfg-ok"></p>';
+    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Bank '+BANK+' soal ⇒ paling lama '+j.perkiraan+' giliran (tiap giliran satu soal per pemain, sama untuk kedua tim).</p><p class="small muted" id="cfg-ok"></p>';
     document.getElementById('cfg').innerHTML = h;
     var t = 0;
     function kirim(){
@@ -180,11 +185,12 @@ page_header('Panel wasit', 'guru/game.php');
   }
 
   function lobi(j){
-    hashPer('lobi', [j.pemain, j.bisa_mulai, j.alasan], function(){
+    hashPer('lobi', [j.pemain, j.bisa_mulai, j.alasan, j.cfg.pakai_fighter], function(){
       [1,2].forEach(function(t){
         var h = '';
-        ORDER.forEach(function(r, k){
-          var idx = (t-1)*4 + k, ada = j.pemain.filter(function(p){ return p.u === idx; })[0];
+        ORDER.forEach(function(r){
+          if (r === 'fighter' && !j.cfg.pakai_fighter) return;
+          var idx = UIDX(t, r), ada = j.pemain.filter(function(p){ return p.u === idx; })[0];
           h += '<div class="slot'+(ada?'':' kosong')+'"><span class="ik">'+PERAN[r][1]+'</span><span class="rl">'+PERAN[r][0]+'</span><select data-slot="'+idx+'">'
             + '<option value="">— kosong —</option>' + j.pemain.map(function(p){ return '<option value="'+p.id+'"'+(ada&&ada.id===p.id?' selected':'')+'>'+esc(p.nama)+(p.u>=0&&(!ada||ada.id!==p.id)?' (sudah di slot lain)':'')+'</option>'; }).join('')
             + '</select></div>';
@@ -192,13 +198,13 @@ page_header('Panel wasit', 'guru/game.php');
         document.getElementById('k'+t).innerHTML = h;
       });
       document.getElementById('pm').innerHTML = j.pemain.map(function(p){
-        return '<span class="pm'+(p.u<0?' penonton':'')+'"><span class="dot'+(p.online?'':' off')+'" title="'+(p.online?'online':'terputus')+'"></span>'+esc(p.nama)+(p.u>=0?' <span class="muted small">'+PERAN[ORDER[p.u%4]][1]+' '+TIMN[p.u<4?1:2]+'</span>':' <span class="muted small">penonton</span>')+' <button class="btn small ghost" data-out="'+p.id+'" title="Keluarkan">✕</button></span>';
+        return '<span class="pm'+(p.u<0?' penonton':'')+'"><span class="dot'+(p.online?'':' off')+'" title="'+(p.online?'online':'terputus')+'"></span>'+esc(p.nama)+(p.u>=0?' <span class="muted small">'+PERAN[ROLEOF(p.u)][1]+' '+TIMN[TIMOF(p.u)]+'</span>':' <span class="muted small">penonton</span>')+' <button class="btn small ghost" data-out="'+p.id+'" title="Keluarkan">✕</button></span>';
       }).join('') || '<span class="muted small">Belum ada murid yang masuk.</span>';
       document.getElementById('jml').textContent = '· '+j.pemain.length+' murid masuk';
       document.getElementById('syarat').innerHTML = j.bisa_mulai ? '' : '<div class="warn">'+esc(j.alasan)+'</div>';
       var bm = document.getElementById('b-mulai'); bm.disabled = !j.bisa_mulai; bm.style.opacity = j.bisa_mulai ? 1 : .5;
       root.querySelectorAll('[data-slot]').forEach(function(s){ s.onchange = function(){
-        var idx = +s.dataset.slot, tim = idx < 4 ? 1 : 2, peran = ORDER[idx%4];
+        var idx = +s.dataset.slot, tim = TIMOF(idx), peran = ROLEOF(idx);
         if (!s.value) { var cur = ST.pemain.filter(function(p){ return p.u === idx; })[0]; if (cur) aksi('atur',{p:cur.id,tim:0,peran:''}); return; }
         aksi('atur',{p:+s.value,tim:tim,peran:peran});
       }; });
@@ -208,7 +214,7 @@ page_header('Panel wasit', 'guru/game.php');
 
   function pct(hp, mx){ return Math.max(0, Math.min(100, mx ? hp/mx*100 : 0)); }
   function barHP(u){ var p = pct(u.hp, u.mx); return '<div class="hpbar"><i class="'+(p<25?'k':p<55?'m':'')+'" style="width:'+p+'%"></i></div><small>'+u.hp+' / '+u.mx+'</small>'; }
-  function nm(j, i){ var u = j.unit[i]; return (u.nama || PERAN[ORDER[i%4]][0]) + ' (' + PERAN[ORDER[i%4]][0] + ' ' + TIMN[i<4?1:2] + ')'; }
+  function nm(j, i){ var u = j.unit[i]; return (u.nama || PERAN[ROLEOF(i)][0]) + ' (' + PERAN[ROLEOF(i)][0] + ' ' + (TIMOF(i) === 1 ? 'Sky Heaven' : 'Dark Earth') + ')'; }
 
   function main(j){
     var fase = j.st === 'jeda' ? j.sblm : j.st;
@@ -236,7 +242,7 @@ page_header('Panel wasit', 'guru/game.php');
     document.getElementById('stat').innerHTML =
       '<div class="box"><b id="tmr">–</b>sisa waktu</div>'
       +'<div class="box"><b>'+(fase==='pilih'?k:d)+' / '+n+'</b>'+(fase==='pilih'?'sudah memilih':'sudah menjawab')+'</div>'
-      +'<div class="box"><b>'+j.hidup[1]+' vs '+j.hidup[2]+'</b>karakter hidup (Kiri vs Kanan)</div>'
+      +'<div class="box"><b>'+j.hidup[1]+' vs '+j.hidup[2]+'</b>karakter hidup (Sky Heaven vs Dark Earth)</div>'
       +'<div class="box"><b>'+j.soal_sisa+'</b>giliran tersisa (maks.)</div>';
     var info = '';
     if (j.soal_sisa === 0) info = '<div class="warn">Ini giliran terakhir (soal habis). Jika belum ada tim yang tumbang, pemenang ditentukan dari jumlah karakter hidup, lalu total HP.</div>';
@@ -262,12 +268,13 @@ page_header('Panel wasit', 'guru/game.php');
     var u = e.u;
     if (e.k === 'gagal') return '<span class="gagal">'+n(u)+' gagal menjalankan skill (jawaban salah / waktu habis / kutukan).</span>';
     if (e.k === 'perisai') return n(u)+(e.m==='semua'?' memasang <b>Benteng Tim</b> (damage masuk 20%).':(e.t===u?' melindungi dirinya sendiri (damage masuk 10%).':' <b>pasang badan</b> di depan '+n(e.t)+' (sekutu 0 damage, tank menerima 10%).'));
+    if (e.k === 'lompat') return n(u)+(e.m==='diri'?' bersiap <b>menghindar</b> (menerima 20%).':' <b>melompat melindungi</b> '+n(e.t)+' (teman 20%, fighter 35%).');
     if (e.k === 'bayangan') return n(u)+' menghilang ke dalam <b>Bayangan</b> (tak bisa diserang giliran ini).';
     if (e.k === 'kutuk') return n(u)+' melempar <b>Kutukan</b> ke tim lawan (target dirahasiakan dari murid).';
     if (e.k === 'heal') return '<span class="heal">'+n(u)+' memakai '+(e.m==='semua'?'Hujan Cahaya':'Penyembuhan')+': '+e.h.map(function(h){ return esc(nm(j,h.u))+' +'+h.n; }).join(', ')+'</span>';
     if (e.k === 'serang') {
-      var s = {basic:'Serangan Dasar', s1:'skill 1', strike:'Serangan Bayangan 275%'}[e.s] || e.s;
-      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bl?' <b>meleset (bayangan)</b>':(t.gd?' <b>ditangkis</b> '+n(t.tk.u)+' <span class="dmg">−'+(t.tk.r!=null?t.tk.r:t.tk.d)+'</span>'+(t.tk.ko?' 💫':''):(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':'')))); }).join(', ');
+      var s = {basic:'Serangan Dasar', s1:'skill 1', strike:'Serangan Bayangan 275%', f2:'Rentetan Pukulan'}[e.s] || e.s;
+      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bl?' <b>meleset (bayangan)</b>':(t.fgd?' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span> (fighter '+n(t.fgd.u)+' '+(t.fgd.tk?'ditangkis tank '+n(t.fgd.tk.u)+' −'+t.fgd.tk.r:'−'+t.fgd.r)+')':(t.gd?' <b>ditangkis</b> '+n(t.tk.u)+' <span class="dmg">−'+(t.tk.r!=null?t.tk.r:t.tk.d)+'</span>'+(t.tk.ko?' 💫':''):(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':'')+(t.n>1?' ('+t.n+' pukulan)':''))))); }).join(', ');
     }
     if (e.k === 'ko') return '💫 <b>'+n(u)+' pingsan!</b>';
     return '';

@@ -140,6 +140,7 @@ Bilangan prima terkecil | 2 | dua</pre>
       <label>Pengulangan soal jika soal habis (kali)<input type="number" name="p[ulang]" min="0" max="10" value="<?= (int)$cfg['ulang'] ?>">
         <small>Jika soal habis dan belum ada tim yang tumbang, soal diacak dan diulang sebanyak ini. Setelah itu pemenang = tim dengan karakter hidup lebih banyak; jika sama, total HP lebih besar.</small></label>
     </div>
+    <input type="hidden" name="p[pakai_fighter]" value="0"><label class="check"><input type="checkbox" name="p[pakai_fighter]" value="1" <?= $cfg['pakai_fighter'] ? 'checked' : '' ?>> <b>Pakai karakter Fighter (5 vs 5)</b> — tiap tim mendapat satu Fighter (petarung tangan kosong yang lincah). Jika tidak dicentang, permainan tetap 4 vs 4. Bisa diubah lagi di Panel wasit sebelum mulai.</label>
     <input type="hidden" name="p[lanjut_otomatis]" value="0"><label class="check"><input type="checkbox" name="p[lanjut_otomatis]" value="1" <?= $cfg['lanjut_otomatis'] ? 'checked' : '' ?>> Lanjut otomatis ke giliran berikutnya setelah animasi hasil (jika dimatikan, guru menekan tombol lanjut)</label>
     <input type="hidden" name="p[acak_opsi]" value="0"><label class="check"><input type="checkbox" name="p[acak_opsi]" value="1" <?= $cfg['acak_opsi'] ? 'checked' : '' ?>> Acak posisi pilihan jawaban (pilihan ganda)</label>
     <input type="hidden" name="p[peringkat]" value="0"><label class="check"><input type="checkbox" name="p[peringkat]" value="1" <?= $cfg['peringkat'] ? 'checked' : '' ?>> Tampilkan peringkat murid di akhir</label>
@@ -148,10 +149,10 @@ Bilangan prima terkecil | 2 | dua</pre>
   <section class="card">
     <div class="sec-head"><h2>4. Stat tiap peran</h2><button type="button" class="btn small" id="stat-reset">Kembalikan stat bawaan</button></div>
     <p class="small muted">HP = darah, Attack = kekuatan serang, Defend = pertahanan, Heal = jumlah pemulihan (hanya dipakai Healer). Damage = <b>(Attack × pengali skill) − Defend lawan</b> (minimal 1).
-      Nilai bawaan sudah diseimbangkan lewat simulasi ribuan pertandingan: Assassin damage terbesar tetapi paling rapuh, Mage menyerang area, Healer dan Tank hampir tidak melukai tetapi menopang tim. Selisih Attack − Defend dijaga selalu positif.</p>
+      Nilai bawaan sudah diseimbangkan lewat simulasi ribuan pertandingan 4 vs 4 maupun 5 vs 5 (lihat README): kedua tim menang ±50%, Assassin damage terbesar tetapi paling rapuh, Mage menyerang area, Fighter petarung tangguh, Healer dan Tank hampir tidak melukai tetapi menopang tim.</p>
     <div style="overflow:auto"><table class="stat-tabel">
       <tr><th>Peran</th><th>HP</th><th>Attack</th><th>Defend</th><th>Heal</th></tr>
-      <?php foreach (rpg_peran_list() as $p): ?>
+      <?php foreach (rpg_peran_semua() as $p): ?>
       <tr><td><b><?= e($peranInfo[$p]['ikon'] . ' ' . $peranInfo[$p]['nama']) ?></b></td>
         <?php foreach (['hp' => [20, 5000], 'atk' => [1, 500], 'def' => [0, 300], 'heal' => [0, 1000]] as $k => $b): ?>
           <td><?php if ($k === 'heal' && $p !== 'healer'): ?><span class="muted">—</span><input type="hidden" name="p[stat][<?= $p ?>][heal]" value="0">
@@ -161,8 +162,9 @@ Bilangan prima terkecil | 2 | dua</pre>
     </table></div>
     <details style="margin-top:12px"><summary class="small"><b>Daftar skill & pengali damage</b></summary>
       <ul class="small">
-        <li><b>Semua peran</b> – Serangan Dasar: 50% Attack ke 1 lawan, tanpa cooldown.</li>
-        <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 anggota; anggota itu 0 damage, tank menerima 10% damage tersebut; tanpa cooldown); Benteng Tim (semua anggota, damage masuk 20%, cooldown 2).</li>
+        <li><b>Semua peran</b> – Serangan Dasar: 10%–20% Attack (acak tiap giliran) ke 1 lawan, tanpa cooldown.</li>
+        <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 <u>teman</u>, bukan diri sendiri; teman itu 0 damage, tank menerima 10% damage tersebut; tanpa cooldown); Benteng Tim (semua anggota, damage masuk 20%, cooldown 2).</li>
+        <li><b>Fighter</b> (opsional) – Lompat Pelindung (melompat ke depan 1 teman: teman menerima 20%, fighter 35%; bila dipilih untuk diri sendiri, fighter menghindar dan menerima 20%; bila tank menjaga fighter, tank yang menerima bagian fighter; cooldown 2); Rentetan Pukulan (lompat ke lawan pertama: 4 pukulan × 20% Attack, lalu lawan lain acak: 1 pukulan 55% Attack, lalu salto kembali; cooldown 2).</li>
         <li><b>Healer</b> – Penyembuhan (1 anggota = Heal penuh, tanpa cooldown); Hujan Cahaya (semua anggota = 55% Heal, cooldown 3).</li>
         <li><b>Assassin</b> – Tusukan Mematikan (1 lawan, 100% Attack, cooldown 2); Bayangan (tak bisa diserang giliran itu, lalu giliran berikutnya Serangan Bayangan 275% Attack jika benar lagi, cooldown 3).</li>
         <li><b>Mage</b> – Hujan Meteor / Badai Es (semua lawan, 100% Attack, cooldown 3); Kutukan (1 lawan, giliran berikutnya 75% gagal walau benar, tersembunyi dari lawan, cooldown 2).</li>

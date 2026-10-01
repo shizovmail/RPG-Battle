@@ -97,7 +97,7 @@ $link = game_link($u['username'], $g['slug']);
 </head><body>
 <div id="wrap">
   <div id="head">
-    <div><div class="sk"><?= e(setting('nama_sekolah')) ?> · RPG Battle 4 vs 4</div><div class="jd">⚔️ <?= e($g['judul']) ?></div></div>
+    <div><div class="sk"><?= e(setting('nama_sekolah')) ?> · RPG Battle <span id="fmt">4 vs 4</span></div><div class="jd">⚔️ <?= e($g['judul']) ?></div></div>
     <div id="rnd">–</div>
     <div id="tmr">–</div>
   </div>
@@ -111,8 +111,8 @@ $link = game_link($u['username'], $g['slug']);
     <div id="conf"></div>
   </div>
   <div id="panels">
-    <div class="tp t1"><h3><span>🟡 TIM KIRI</span><span id="h1"></span></h3><div class="cards" id="c1"></div></div>
-    <div class="tp t2"><h3><span>🟤 TIM KANAN</span><span id="h2"></span></h3><div class="cards" id="c2"></div></div>
+    <div class="tp t1"><h3><span>🟡 SKY HEAVEN GUARDIANS</span><span id="h1"></span></h3><div class="cards" id="c1"></div></div>
+    <div class="tp t2"><h3><span>🟤 DARK EARTH WARRIORS</span><span id="h2"></span></h3><div class="cards" id="c2"></div></div>
   </div>
   <div id="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
 </div>
@@ -126,27 +126,41 @@ $link = game_link($u['username'], $g['slug']);
   var $ = function(i){ return document.getElementById(i); };
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
-  var PERAN = {tank:['Tank','🛡️'], assassin:['Assassin','🗡️'], mage:['Mage','🔮'], healer:['Healer','✨']};
-  var ORDER = ['tank','assassin','mage','healer'];
-  var TIMN = {1:'Kiri', 2:'Kanan'};
-  var WARNA = {1:{tank:'#f6c400',assassin:'#4b2a78',mage:'#d32f2f',healer:'#f4f4f8'}, 2:{tank:'#8d5a2b',assassin:'#1a1a1f',mage:'#8fd8f5',healer:'#43a85f'}};
-  // posisi formasi tim kiri: tank paling depan, assassin & mage sejajar di belakangnya, healer paling belakang (sejajar tank)
-  var FORM = {tank:[672,545], assassin:[505,432], mage:[545,655], healer:[372,545]};
-  var TOPH = {tank:178, assassin:152, mage:208, healer:166};   // tinggi karakter (untuk menaruh nama di atas kepala)
+  var PERAN = {tank:['Tank','🛡️'], fighter:['Fighter','🥊'], assassin:['Assassin','🗡️'], mage:['Mage','🔮'], healer:['Healer','✨']};
+  var BASEORD = ['tank','assassin','mage','healer'];                 // urutan indeks unit 0..7 (Fighter = 8 dan 9)
+  var ORDER = ['tank','fighter','assassin','mage','healer'];          // urutan tampil di kartu
+  var TIMN = {1:'Sky Heaven Guardians', 2:'Dark Earth Warriors'};
+  function TIMOF(i){ return i < 8 ? (i < 4 ? 1 : 2) : i - 7; }
+  function ROLEOF(i){ return i < 8 ? BASEORD[i % 4] : 'fighter'; }
+  function UIDX(t, r){ return r === 'fighter' ? 8 + t - 1 : (t - 1) * 4 + BASEORD.indexOf(r); }
+  function TEAM(t){ var a = []; for (var i = 0; i < S.n; i++) if (TIMOF(i) === t) a.push(i); return a; }
+  var WARNA = {1:{tank:'#f6c400',fighter:'#8bc34a',assassin:'#4b2a78',mage:'#d32f2f',healer:'#f4f4f8'}, 2:{tank:'#8d5a2b',fighter:'#d84315',assassin:'#1a1a1f',mage:'#8fd8f5',healer:'#43a85f'}};
+  // formasi tim kiri. 4 peran: tank paling depan, assassin & mage sejajar di belakangnya, healer paling belakang.
+  // 5 peran (dengan Fighter): tank depan agak bawah, fighter di belakangnya agak atas, assassin agak bawah, mage agak atas, healer di belakang.
+  var FORM4 = {tank:[672,545], assassin:[505,432], mage:[545,655], healer:[372,545]};
+  var FORM5 = {tank:[705,572], fighter:[600,482], assassin:[495,584], mage:[390,490], healer:[285,556]};
+  var TOPH = {tank:178, fighter:158, assassin:152, mage:208, healer:166};   // tinggi karakter (untuk menaruh nama di atas kepala)
   var POS = [];
-  ORDER.forEach(function(r, k){
-    var f = FORM[r], s = 0.86 + (f[1]-432) / 223 * 0.18;
-    POS[k] = {x:f[0], y:f[1], s:s, dir:1, top:TOPH[r]*s};
-    POS[4+k] = {x:1600-f[0], y:f[1], s:s, dir:-1, top:TOPH[r]*s};
-  });
+  function hitungPOS(f5){
+    var F = f5 ? FORM5 : FORM4, roles = f5 ? ORDER : BASEORD;
+    POS = [];
+    roles.forEach(function(r){
+      var f = F[r], s = (0.86 + (f[1]-432) / 223 * 0.18) * (f5 ? 0.93 : 1);
+      POS[UIDX(1, r)] = {x:f[0], y:f[1], s:s, dir:1, top:TOPH[r]*s};
+      POS[UIDX(2, r)] = {x:1600-f[0], y:f[1], s:s, dir:-1, top:TOPH[r]*s};
+    });
+  }
+  hitungPOS(false);
 
   // ================= ADEGAN =================
   var PAL = {
-    1:{ tank:{main:'#f7c61a',dark:'#a9780a',light:'#ffe680',acc:'#c0392b'},
+    1:{ fighter:{main:'#8bc34a',dark:'#4f7a1c',light:'#c5e88f',acc:'#ff9800'},
+        tank:{main:'#f7c61a',dark:'#a9780a',light:'#ffe680',acc:'#c0392b'},
         assassin:{main:'#3d1d63',dark:'#1d0a36',light:'#8a4fd6',acc:'#d9b3ff'},
         mage:{main:'#d62f2f',dark:'#7f0f0f',light:'#ff7a7a',acc:'#ffd54f'},
         healer:{main:'#fbfbfd',dark:'#b9bdd0',light:'#ffffff',acc:'#f4c542'} },
-    2:{ tank:{main:'#8b5a2b',dark:'#4a2b10',light:'#c98f55',acc:'#f1d28a'},
+    2:{ fighter:{main:'#d84315',dark:'#7a210a',light:'#ff8a50',acc:'#ffd54f'},
+        tank:{main:'#8b5a2b',dark:'#4a2b10',light:'#c98f55',acc:'#f1d28a'},
         assassin:{main:'#1a1a22',dark:'#050509',light:'#52525f',acc:'#ff3b3b'},
         mage:{main:'#8fd8f5',dark:'#2f8fbf',light:'#e1f6ff',acc:'#ffffff'},
         healer:{main:'#43b05f',dark:'#1d7535',light:'#a4ecb4',acc:'#fff2a8'} } };
@@ -217,6 +231,18 @@ $link = game_link($u['username'], $g['slug']);
             + '<path d="M-28,-14 Q-30,-52 0,-54 Q30,-52 28,-14 Q18,-34 0,-34 Q-18,-34 -28,-14Z" fill="'+p.main+'" stroke="'+p.dark+'" stroke-width="3"/>'
             + '<path d="M-14,-34 Q0,-27 14,-34" stroke="'+p.light+'" stroke-width="2" fill="none" opacity=".6"/>', -20, p.acc)
         + lengan(p, kulit, belati);
+    } else if (role === 'fighter') {
+      var tinju = function(x, y, r){ return '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+p.acc+'" stroke="'+p.dark+'" stroke-width="3"/><path d="M'+(x-r+2)+','+(y-3)+' h'+(2*r-4)+' M'+(x-r+2)+','+(y+3)+' h'+(2*r-4)+'" stroke="'+p.dark+'" stroke-width="1.5" opacity=".6"/>'; };
+      s += '<g transform="translate(-14,-82)"><g class="arm-b" style="transform-origin:0 0"><line x1="0" y1="0" x2="-12" y2="26" stroke="'+kulit+'" stroke-width="12" stroke-linecap="round"/>'+tinju(-13,28,9)+'</g></g>'
+        + kaki(p)
+        + '<path d="M-24,-44 L-22,-60 L22,-60 L24,-44Z" fill="'+p.dark+'"/><rect x="-24" y="-62" width="48" height="9" fill="'+p.acc+'" stroke="'+p.dark+'" stroke-width="2"/>'
+        + '<path d="M-26,-60 L-22,-94 Q0,-102 22,-94 L26,-60 Z" fill="'+p.main+'" stroke="'+p.dark+'" stroke-width="3.5"/>'
+        + '<path d="M-10,-96 L0,-66 L10,-96Z" fill="'+kulit+'"/><path d="M-26,-94 L-22,-60 M26,-94 L22,-60" stroke="'+p.light+'" stroke-width="3" opacity=".6"/>'
+        + kepala(kulit, '',
+            '<path d="M-26,-26 L-22,-52 L-12,-40 L-6,-58 L2,-42 L10,-58 L14,-40 L24,-50 L26,-26 Q12,-38 0,-36 Q-12,-38 -26,-26Z" fill="#2a1a10"/>'
+            + '<rect x="-26" y="-30" width="52" height="8" rx="3" fill="'+p.acc+'" stroke="'+p.dark+'" stroke-width="2"/>'
+            + '<path d="M-26,-26 Q-44,-24 -50,-8 Q-38,-18 -26,-22Z" fill="'+p.acc+'"/>', -18)
+        + '<g transform="translate(14,-82)"><g class="arm-f" style="transform-origin:0 0"><line x1="0" y1="0" x2="22" y2="20" stroke="'+kulit+'" stroke-width="13" stroke-linecap="round"/>'+tinju(25,22,11)+'</g></g>';
     } else if (role === 'mage') {
       var orb = tim === 1 ? '#ff7043' : '#80deea';
       var tongkat = '<g transform="translate(2,0)"><line x1="4" y1="30" x2="12" y2="-92" stroke="#6b4a2b" stroke-width="6" stroke-linecap="round"/>'
@@ -301,11 +327,17 @@ $link = game_link($u['username'], $g['slug']);
       + '<g transform="translate(1200,0)"><rect x="-4" y="0" width="8" height="30" fill="#3a2a20"/><path d="M-60,26 L60,26 L60,100 L0,126 L-60,100Z" fill="#8b5a2b" stroke="#4a2b10" stroke-width="5"/><circle cx="0" cy="64" r="22" fill="#4a2b10"/><path d="M-12,56 L12,56 L0,78Z" fill="#f1d28a"/></g>';
     sc.innerHTML = s;
     // lapisan karakter, efek
-    var units = mk('g', {id:'units'}); sc.appendChild(units);
+    sc.appendChild(mk('g', {id:'units'}));
     sc.appendChild(mk('g', {id:'fx'}));
-    var urut = POS.map(function(p, i){ return i; }).sort(function(a, b){ return POS[a].y - POS[b].y; });
+    bangunUnits();
+  }
+  function bangunUnits(){
+    var units = $('units'); units.innerHTML = '';
+    var urut = [];
+    for (var q = 0; q < S.n; q++) urut.push(q);
+    urut.sort(function(a, b){ return POS[a].y - POS[b].y; });
     urut.forEach(function(i){
-      var p = POS[i], role = ORDER[i % 4], tim = i < 4 ? 1 : 2;
+      var p = POS[i], role = ROLEOF(i), tim = TIMOF(i);
       var g = mk('g', {id:'u'+i, 'class':'u', transform:'translate('+p.x+','+p.y+')'});
       g.style.setProperty('--d', (-(i*0.37)).toFixed(2)+'s');
       g.innerHTML =
@@ -324,23 +356,23 @@ $link = game_link($u['username'], $g['slug']);
   // ================= KARTU HP =================
   function bangunKartu(){
     [1,2].forEach(function(t){
-      var h = '';
-      ORDER.forEach(function(r, k){
-        var i = (t-1)*4 + k;
+      var h = '', roles = S.n === 10 ? ORDER : BASEORD;
+      roles.forEach(function(r){
+        var i = UIDX(t, r);
         h += '<div class="cd" id="cd'+i+'"><div class="r"><div class="av" style="background:'+WARNA[t][r]+'">'+PERAN[r][1]+'</div><div style="min-width:0"><div class="nm">–</div><div class="rl">'+PERAN[r][0]+'</div></div></div>'
           + '<div class="hb"><i style="width:100%"></i><b></b></div><span class="st"></span></div>';
       });
       $('c'+t).innerHTML = h;
+      $('c'+t).style.gridTemplateColumns = 'repeat(' + roles.length + ',1fr)';
     });
   }
 
   // ================= STATE TAMPILAN =================
-  var S = { gpos:{}, j:null, k:null, anim:0, hp:[], nama:[], sisa:null, t0:0, tikTerakhir:-1, animJalan:false, lobiDibuat:false, lk:'' };
+  var S = { n:8, gpos:{}, j:null, k:null, anim:0, hp:[], nama:[], sisa:null, t0:0, tikTerakhir:-1, animJalan:false, lobiDibuat:false, lk:'' };
   function pct(hp, mx){ return Math.max(0, Math.min(100, mx ? hp/mx*100 : 0)); }
   function hpk(p){ return p < 25 ? 'k' : p < 55 ? 'm' : ''; }
-  function nm(i){ var u = S.j && S.j.unit[i]; return (u && u.nama) ? u.nama : PERAN[ORDER[i%4]][0]; }
-  function lab(i){ return nm(i) + ' (' + PERAN[ORDER[i%4]][0] + ' ' + TIMN[i<4?1:2] + ')'; }
-  function timNama(i){ return 'Tim ' + TIMN[i<4?1:2]; }
+  function nm(i){ var u = S.j && S.j.unit[i]; return (u && u.nama) ? u.nama : PERAN[ROLEOF(i)][0]; }
+  function lab(i){ return nm(i) + ' (' + PERAN[ROLEOF(i)][0] + ' ' + (TIMOF(i) === 1 ? 'Sky Heaven' : 'Dark Earth') + ')'; }
 
   function setHP(i, hp){
     var u = S.j.unit[i], p = pct(hp, u.mx);
@@ -358,35 +390,36 @@ $link = game_link($u['username'], $g['slug']);
   }
   function snap(j){
     lepasGuard();
-    for (var i = 0; i < 8; i++){
+    for (var i = 0; i < S.n; i++){
       var u = j.unit[i], el = $('u'+i);
       setNama(i); setHP(i, u.hp);
       el.classList.toggle('ko', !u.hidup);
       el.classList.toggle('siap', !!u.siap && u.hidup);
       $('cd'+i).classList.toggle('mati', !u.hidup);
     }
-    $('h1').textContent = j.hidup[1] + ' / 4 hidup'; $('h2').textContent = j.hidup[2] + ' / 4 hidup';
+    var per = S.n / 2; $('fmt').textContent = per + ' vs ' + per;
+    $('h1').textContent = j.hidup[1] + ' / ' + per + ' hidup'; $('h2').textContent = j.hidup[2] + ' / ' + per + ' hidup';
   }
   function urutZ(){
     var u = $('units'), a = [];
-    for (var i = 0; i < 8; i++) a.push(i);
+    for (var i = 0; i < S.n; i++) a.push(i);
     a.sort(function(x, y){ return POS[x].y - POS[y].y; }).forEach(function(i){ u.appendChild($('u'+i)); });
   }
   function lepasGuard(){
     S.gpos = {};
-    for (var i = 0; i < 8; i++) { var mv = $('u'+i).querySelector('.mv'); if (mv) mv.style.transform = ''; }
+    for (var i = 0; i < S.n; i++) { var mv = $('u'+i).querySelector('.mv'); if (mv) mv.style.transform = ''; }
     setTimeout(urutZ, 700);
   }
   function bersih(){
     lepasGuard();
-    for (var i = 0; i < 8; i++){
+    for (var i = 0; i < S.n; i++){
       var el = $('u'+i);
       ['sad','stealth','dome-on','hit','pesta'].forEach(function(c){ el.classList.remove(c); });
     }
     $('fx').innerHTML = '';
   }
   function lencana(j, mode){
-    for (var i = 0; i < 8; i++){
+    for (var i = 0; i < S.n; i++){
       var u = j.unit[i], t = '';
       if (u.hidup && u.nama) {
         if (mode === 'pilih') t = u.kunci ? '✅' : '🤔';
@@ -441,7 +474,11 @@ $link = game_link($u['username'], $g['slug']);
   }
   function arah(i){ return POS[i].dir; }
   // gerakan lokal (sumbu x lokal menghadap lawan) menuju titik global
-  function tgtXY(t){ return (t.gd && t.tk && S.gpos[t.tk.u]) ? S.gpos[t.tk.u] : {x: POS[t.u].x, y: POS[t.u].y}; }
+  function tgtXY(t){
+    if (t.gd && t.tk && S.gpos[t.tk.u]) return S.gpos[t.tk.u];
+    if (t.fgd && S.gpos[t.fgd.u]) return S.gpos[t.fgd.u];
+    return {x: POS[t.u].x, y: POS[t.u].y};
+  }
   function keTarget(i, X, Y, jarak){
     var dx = (X - POS[i].x) * arah(i) / POS[i].s, dy = (Y - POS[i].y) / POS[i].s;
     var sisi = (jarak || 80) / POS[i].s;
@@ -460,11 +497,30 @@ $link = game_link($u['username'], $g['slug']);
       setHP(tk.u, tk.hp); sfx.perisai();
       return;
     }
+    if (t.fgd) {  // fighter melompat melindungi: teman 20%, fighter 35% (atau tank menangkis bagian fighter)
+      var f = t.fgd, fp = S.gpos[f.u] || POS[f.u], kk = kepalaXY(t.u);
+      tabrak(t.u);
+      teks(kk.x, kk.y - 6, '−' + (t.r != null ? t.r : t.d), '#ff5252', 32);
+      setHP(t.u, t.hp);
+      ledakan(fp.x + arah(f.u) * 20, fp.y - 70 * POS[f.u].s, ['#fff','#c5e88f','#ffd54f'], 12, 60);
+      if (f.tk) {
+        var tp = S.gpos[f.tk.u] || POS[f.tk.u];
+        teks(fp.x, fp.y - 130 * POS[f.u].s - 6, 'DITANGKIS!', '#9fe3ff', 26);
+        tabrak(f.tk.u); teks(tp.x, tp.y - 130 * POS[f.tk.u].s - 6, '−' + (f.tk.r != null ? f.tk.r : f.tk.d), '#ff5252', 34);
+        setHP(f.tk.u, f.tk.hp);
+      } else {
+        tabrak(f.u); teks(fp.x, fp.y - 130 * POS[f.u].s - 6, '−' + (f.r != null ? f.r : f.d), '#ff7043', 38);
+        setHP(f.u, f.hp);
+      }
+      sfx.perisai();
+      return;
+    }
     tabrak(t.u);
     var k = kepalaXY(t.u), m = tengahXY(t.u);
     ledakan(m.x, m.y, warna || ['#fff','#ffd54f','#ff8a65'], 12, 70);
     var dm = t.r != null ? t.r : t.d;
     teks(k.x, k.y - 6, (t.pr ? '🛡️ ' : '') + '−' + dm, t.pr ? '#9fe3ff' : '#ff5252', Math.min(64, 34 + dm * .25));
+    if (t.mh) teks(k.x, k.y - 44, 'MENGHINDAR!', '#b9f6ca', 26);
     setHP(t.u, t.hp);
     sfx.hantam();
   }
@@ -514,11 +570,13 @@ $link = game_link($u['username'], $g['slug']);
     tank:{basic:'Serangan Dasar', s1:'Pasang Badan', s2:'Benteng Tim'},
     healer:{basic:'Serangan Dasar', s1:'Penyembuhan', s2:'Hujan Cahaya'},
     assassin:{basic:'Serangan Dasar', s1:'Tusukan Mematikan', s2:'Bayangan', strike:'Serangan Bayangan'},
-    mage:{basic:'Serangan Dasar', s1:null, s2:'Kutukan'}
+    mage:{basic:'Serangan Dasar', s1:null, s2:'Kutukan'},
+    fighter:{basic:'Serangan Dasar', s1:'Lompat Pelindung', s2:'Rentetan Pukulan'}
   };
+  function pusatX(t){ var a = TEAM(t), x = 0; a.forEach(function(i){ x += POS[i].x; }); return a.length ? x / a.length : 800; }
   function namaSkill(i, s){
-    var r = ORDER[i%4];
-    if (r === 'mage' && s === 's1') return i < 4 ? 'Hujan Meteor' : 'Badai Es';
+    var r = ROLEOF(i);
+    if (r === 'mage' && s === 's1') return TIMOF(i) === 1 ? 'Hujan Meteor' : 'Badai Es';
     return NAMASKILL[r][s] || s;
   }
 
@@ -538,12 +596,32 @@ $link = game_link($u['username'], $g['slug']);
     }
     cap('🛡️ ' + lab(e.u) + ' memakai ' + (semua ? 'Benteng Tim!' : 'perisai untuk dirinya sendiri!'));
     sfx.perisai();
-    var tl = semua ? [0,1,2,3].map(function(k){ return (e.u < 4 ? 0 : 4) + k; }) : [e.t];
+    var tl = semua ? TEAM(TIMOF(e.u)).filter(function(k){ return S.j.unit[k].hidup || k === e.u; }) : [e.t];
     var p = pose(e.u, 900);
     tl.forEach(function(t, k){ setTimeout(function(){
       { $('u'+t).classList.add('dome-on'); cincin(POS[t].x, POS[t].y - 60*POS[t].s, '#ffd54f', 50, 70, 700); }
     }, 250 + k*120); });
     return Promise.all([p, sleep(1500)]);
+  };
+  AKSI.lompat = function(e){
+    var g = e.u, dg = arah(g);
+    if (e.m === 'diri') {
+      cap('🤸 ' + lab(g) + ' bersiap menghindar!');
+      sfx.bayang();
+      var ak = gerak(g, [{transform:'translate(0,0)'},{transform:'translate(-55px,-70px) rotate(-14deg)', offset:.3},{transform:'translate(-35px,0) rotate(-6deg)', offset:.62},{transform:'translate(0,0)'}], {duration:1300, easing:'ease-in-out'});
+      cincin(POS[g].x, POS[g].y - 50*POS[g].s, '#c5e88f', 50, 60, 800);
+      $('u'+g).classList.add('dome-on');
+      return Promise.all([ak, sleep(1500)]);
+    }
+    var t = e.t, gx = POS[t].x + dg * 60, gy = POS[t].y + 12;
+    cap('🤸 ' + lab(g) + ' melompat melindungi ' + nm(t) + '!');
+    sfx.perisai();
+    S.gpos[g] = {x: gx, y: gy};
+    $('units').appendChild($('u'+g));
+    $('u'+g).querySelector('.mv').style.transform = 'translate(' + ((gx - POS[g].x) * dg / POS[g].s) + 'px,' + ((gy - POS[g].y) / POS[g].s) + 'px)';
+    var lp = gerak(g, [{transform:'translateY(0)'},{transform:'translateY(-120px)', offset:.5},{transform:'translateY(0)'}], {duration:700, easing:'ease-out'});
+    setTimeout(function(){ cincin(gx, gy - 60*POS[g].s, '#c5e88f', 50, 70, 700); $('u'+g).classList.add('dome-on'); }, 650);
+    return Promise.all([lp, sleep(1700)]);
   };
   AKSI.bayangan = function(e){
     cap('👤 ' + lab(e.u) + ' menghilang ke dalam bayangan…');
@@ -554,8 +632,8 @@ $link = game_link($u['username'], $g['slug']);
     return sleep(1500);
   };
   AKSI.kutuk = function(e){
-    var lawan = e.u < 4 ? 4 : 0, cx = lawan ? 1160 : 440;
-    cap('💀 ' + lab(e.u) + ' melempar kutukan ke ' + 'Tim ' + TIMN[lawan ? 2 : 1] + '! (siapa yang terkena dirahasiakan)');
+    var lawanT = TIMOF(e.u) === 1 ? 2 : 1, cx = pusatX(lawanT);
+    cap('💀 ' + lab(e.u) + ' melempar kutukan ke ' + TIMN[lawanT] + '! (siapa yang terkena dirahasiakan)');
     sfx.kutuk();
     var k = kepalaXY(e.u), p = pose(e.u, 900);
     var orb = '<circle r="26" fill="#6a1b9a" opacity=".5"/><circle r="16" fill="#4a148c" stroke="#e1bee7" stroke-width="3"/><text y="8" text-anchor="middle" font-size="22">💀</text>';
@@ -580,7 +658,7 @@ $link = game_link($u['username'], $g['slug']);
     cap('💚 ' + lab(e.u) + ' memakai ' + (e.m === 'semua' ? 'Hujan Cahaya untuk seluruh timnya!' : 'Penyembuhan untuk ' + (e.h[0] ? nm(e.h[0].u) : '—') + '!'));
     sfx.heal();
     var p = pose(e.u, 1000);
-    if (e.m === 'semua') { var c = tengahXY(e.u < 4 ? 1 : 5); cincin(e.u < 4 ? 520 : 1080, 506, '#69f0ae', 260, 70, 1200); }
+    if (e.m === 'semua') { cincin(pusatX(TIMOF(e.u)), 520, '#69f0ae', 300, 80, 1200); }
     e.h.forEach(function(h, k){
       setTimeout(function(){
         var m = tengahXY(h.u);
@@ -592,12 +670,41 @@ $link = game_link($u['username'], $g['slug']);
     });
     return Promise.all([p, sleep(1600)]);
   };
+  // Fighter skill 2: lompat ke lawan pertama, 4 pukulan beruntun, lompat ke lawan kedua, 1 pukulan, salto kembali
+  function kombo(e){
+    var u = e.u, T = e.t, A = T[0], B = T[1] || T[0], pa = tgtXY(A), pb = tgtXY(B);
+    cap('🥊 ' + lab(u) + ' memakai Rentetan Pukulan ke ' + nm(A.u) + (B.u !== A.u ? ' lalu ' + nm(B.u) : '') + '!');
+    var d1 = keTarget(u, pa.x, pa.y, 60), d2 = keTarget(u, pb.x, pb.y, 60), D = 3600;
+    var tr = function(d){ return 'translate(' + d.dx + 'px,' + d.dy + 'px) rotate(0deg)'; };
+    var an = $('u'+u).querySelector('.anim'); an.style.transformOrigin = '0px -70px';
+    var anim = gerak(u, [
+      {transform:'translate(0,0) rotate(0deg)', offset:0},
+      {transform:'translate(' + d1.dx/2 + 'px,' + (d1.dy/2 - 100) + 'px) rotate(0deg)', offset:.07},
+      {transform:tr(d1), offset:.14}, {transform:tr(d1), offset:.50},
+      {transform:'translate(' + ((d1.dx+d2.dx)/2) + 'px,' + ((d1.dy+d2.dy)/2 - 100) + 'px) rotate(0deg)', offset:.57},
+      {transform:tr(d2), offset:.64}, {transform:tr(d2), offset:.78},
+      {transform:'translate(' + d2.dx/2 + 'px,' + (d2.dy/2 - 130) + 'px) rotate(-200deg)', offset:.88},
+      {transform:'translate(0,0) rotate(-360deg)', offset:1}], {duration:D, easing:'ease-in-out'});
+    sfx.tebas();
+    var tuA = A.gd && A.tk ? A.tk.u : (A.fgd ? A.fgd.u : A.u);
+    [.20,.27,.34,.41].forEach(function(f, n){
+      setTimeout(function(){
+        if (A.bl) { if (n === 0) hantam(e, A, null); return; }
+        sfx.tebas();
+        if (n < 3) { tabrak(tuA); ledakan(pa.x, pa.y - 70*POS[A.u].s, ['#fff','#ffb74d','#ff9800'], 6, 40, 5); }
+        else hantam(e, A, ['#ffe0b2','#fff','#ff9800']);
+      }, f * D);
+    });
+    setTimeout(function(){ sfx.hantam(); kilat('#ffe0b2', 250); hantam(e, B, ['#fff','#ff7043','#ffd54f']); }, .66 * D);
+    return anim.then(function(){ an.style.transformOrigin = ''; return sleep(250); });
+  }
   AKSI.serang = function(e){
-    var u = e.u, role = ORDER[u%4], tim = u < 4 ? 1 : 2, s = e.s, T = e.t;
+    var u = e.u, role = ROLEOF(u), tim = TIMOF(u), s = e.s, T = e.t;
     var nmS = namaSkill(u, s);
+    if (e.m === 'kombo') return kombo(e);
     if (e.m === 'semua') {
       var pre = (tim === 1 ? '☄️ ' : '❄️ ');
-      cap(pre + lab(u) + ' memakai ' + nmS + ' ke seluruh ' + 'Tim ' + TIMN[tim === 1 ? 2 : 1] + '!');
+      cap(pre + lab(u) + ' memakai ' + nmS + ' ke seluruh ' + TIMN[tim === 1 ? 2 : 1] + '!');
       var p = pose(u, 1100);
       if (tim === 1) sfx.meteor(); else sfx.es();
       var proms = [];
@@ -671,7 +778,7 @@ $link = game_link($u['username'], $g['slug']);
     S.animJalan = true;
     var ev = j.kejadian || [];
     await sleep(500); if (!ok()) return;
-    var g1 = ev.filter(function(e){ return e.k === 'perisai' || e.k === 'bayangan' || e.k === 'kutuk'; });
+    var g1 = ev.filter(function(e){ return e.k === 'perisai' || e.k === 'lompat' || e.k === 'bayangan' || e.k === 'kutuk'; });
     for (var a = 0; a < g1.length; a++) { if (!ok()) return; await AKSI[g1[a].k](g1[a]); }
     if (g1.length) { cap(''); await sleep(250); }
     var g2 = ev.filter(function(e){ return e.k === 'heal' || e.k === 'gagal'; });
@@ -713,8 +820,7 @@ $link = game_link($u['username'], $g['slug']);
     var a = j.akhir || {}, al = String(a.alasan || '');
     var h = a.hidup || {1:j.hidup[1], 2:j.hidup[2]}, hp = a.hp || {};
     if (j.pemenang === 3) return 'Kedua tim sama kuat!';
-    var m = 'Tim ' + TIMN[j.pemenang];
-    if (al === 'habis') return 'Seluruh anggota Tim ' + TIMN[j.pemenang === 1 ? 2 : 1] + ' tumbang!';
+    if (al === 'habis') return 'Seluruh anggota ' + TIMN[j.pemenang === 1 ? 2 : 1] + ' tumbang!';
     var tail = al.indexOf('hp') >= 0 ? ' Karakter hidup sama banyak (' + h[1] + '), total HP ' + hp[1] + ' vs ' + hp[2] + '.' : ' Karakter hidup ' + h[1] + ' vs ' + h[2] + '.';
     return (al.indexOf('guru') === 0 ? 'Diakhiri guru.' : 'Soal habis!') + tail;
   }
@@ -732,8 +838,8 @@ $link = game_link($u['username'], $g['slug']);
     el.style.display = 'grid';
     var key = JSON.stringify(j.pemain.map(function(p){ return [p.id, p.nama, p.u]; }));
     if (key === S.lk) return; S.lk = key;
-    $('lcount').textContent = '· ' + j.pemain.length + ' murid masuk · ' + j.pemain.filter(function(p){ return p.u >= 0; }).length + '/8 sudah dapat peran';
-    $('lchips').innerHTML = j.pemain.map(function(p){ return '<span class="chip' + (p.u < 0 ? ' p' : '') + '">' + (p.u >= 0 ? PERAN[ORDER[p.u%4]][1] + ' ' : '') + esc(p.nama) + '</span>'; }).join('') || '<span style="opacity:.6">Menunggu murid masuk…</span>';
+    $('lcount').textContent = '· ' + j.pemain.length + ' murid masuk · ' + j.pemain.filter(function(p){ return p.u >= 0; }).length + '/' + j.unit.length + ' sudah dapat peran';
+    $('lchips').innerHTML = j.pemain.map(function(p){ return '<span class="chip' + (p.u < 0 ? ' p' : '') + '">' + (p.u >= 0 ? PERAN[ROLEOF(p.u)][1] + ' ' : '') + esc(p.nama) + '</span>'; }).join('') || '<span style="opacity:.6">Menunggu murid masuk…</span>';
   }
   function overlay(j){
     var o = $('ovl'), h, ko;
@@ -753,7 +859,10 @@ $link = game_link($u['username'], $g['slug']);
   }
 
   function terima(j){
-    if (j.st === 'kosong') { j.unit = []; for (var q = 0; q < 8; q++) j.unit.push({i:q, tim:q<4?1:2, peran:ORDER[q%4], nama:'', hp:1, mx:1, hidup:true, kunci:false, sudah:false}); j.hidup = {1:4, 2:4}; j.pemain = []; j.ronde = 0; }
+    if (j.st === 'kosong') { j.unit = []; for (var q = 0; q < 8; q++) j.unit.push({i:q, tim:TIMOF(q), peran:ROLEOF(q), nama:'', hp:1, mx:1, hidup:true, kunci:false, sudah:false}); j.hidup = {1:4, 2:4}; j.pemain = []; j.ronde = 0; }
+    if (j.unit.length !== S.n) {   // jumlah karakter berubah (Fighter dihidupkan/dimatikan): susun ulang adegan
+      S.n = j.unit.length; hitungPOS(S.n === 10); bangunUnits(); bangunKartu(); S.hp = []; S.gpos = {};
+    }
     S.j = j; S.sisa = j.sisa; S.t0 = Date.now();
     var k = j.st + '|' + j.sesi + '|' + j.ronde;
     if (j.st !== 'jeda' && k !== S.k) {
@@ -766,21 +875,21 @@ $link = game_link($u['username'], $g['slug']);
       else if (j.st === 'soal') { snap(j); }
       else if (j.st === 'hasil') {
         lencana(j, '');
-        if (!S.hp.length) snap(j); else for (var q2 = 0; q2 < 8; q2++) setNama(q2);   // halaman dibuka saat fase aksi: isi nama dulu
+        if (!S.hp.length) snap(j); else for (var q2 = 0; q2 < S.n; q2++) setNama(q2);   // halaman dibuka saat fase aksi: isi nama dulu
         var tok = S.anim; mainkan(j, tok);
       }
       else if (j.st === 'selesai') {
         snap(j);
         if (!(j.akhir && j.akhir.batal)) {
           var sedang = j.pemenang;
-          for (var i = 0; i < 8; i++){
-            var el = $('u'+i), tim = i < 4 ? 1 : 2, u = j.unit[i];
+          for (var i = 0; i < S.n; i++){
+            var el = $('u'+i), tim = TIMOF(i), u = j.unit[i];
             if (!u.hidup) continue;
             if (sedang === 3 || tim === sedang) el.classList.add('pesta'); else el.classList.add('sad');
             el.classList.remove('stealth');
           }
           if (sedang === 3) { banner('🤝 SERI!', alasanAkhir(j)); sfx.seri(); }
-          else { banner('🏆 TIM ' + TIMN[sedang].toUpperCase() + ' MENANG!', alasanAkhir(j)); sfx.menang(); setTimeout(confetti, 600); }
+          else { banner('🏆 ' + TIMN[sedang].toUpperCase() + ' MENANG!', alasanAkhir(j)); sfx.menang(); setTimeout(confetti, 600); }
         }
       }
     }

@@ -14,32 +14,46 @@
 // =====================================================
 require_once __DIR__ . '/live.php';   // memakai live_norm, live_acak, live_tx
 
-const RPG_BASIC = 0.5;        // serangan dasar = 50% attack
+const RPG_BASIC_MIN = 0.10;   // serangan dasar: 10%–20% attack (acak tiap giliran)
+const RPG_BASIC_MAX = 0.20;
 const RPG_AOE = 1.0;          // skill 1 mage (area) = 100% attack
 const RPG_ASSASSIN_1 = 1.0;   // skill 1 assassin = 100% attack, 1 target
 const RPG_STRIKE = 2.75;      // serangan bayangan assassin = 275% attack
 const RPG_LINDUNG_1 = 0.10;   // tank pasang badan untuk 1 anggota: anggota 0 damage, tank menerima 10% dari damage itu
 const RPG_LINDUNG_SEMUA = 0.20; // Benteng Tim: semua anggota menerima 20%
 const RPG_HEAL_SEMUA = 0.55;  // heal semua = 55% heal satu anggota (per anggota)
+const RPG_F_PUKUL = 0.20;     // Fighter skill 2: 4 pukulan x 20% attack ke lawan pertama (total 80%)
+const RPG_F_PUKUL_N = 4;
+const RPG_F_SUSUL = 0.55;     // lalu 1 pukulan 55% attack ke lawan kedua
+const RPG_F_TEMAN = 0.20;     // Fighter skill 1: sekutu yang dilindungi menerima 20% damage
+const RPG_F_DIRI = 0.35;      // ... dan fighter menerima 35% damage yang tertuju ke sekutu itu
+const RPG_F_MENGHINDAR = 0.20; // melindungi diri sendiri (menghindar): menerima 20%
 const RPG_KUTUK_GAGAL = 75;   // peluang (%) jawaban benar dianggap gagal saat dikutuk
 
-function rpg_peran_list() { return ['tank', 'assassin', 'mage', 'healer']; }
+function rpg_peran_list() { return ['tank', 'assassin', 'mage', 'healer']; }      // 4 peran dasar (indeks unit 0..7)
+function rpg_peran_semua() { return ['tank', 'fighter', 'assassin', 'mage', 'healer']; }
 function rpg_peran_info()
 {
     return [
         'tank' => ['nama' => 'Tank', 'ikon' => '🛡️'],
+        'fighter' => ['nama' => 'Fighter', 'ikon' => '🥊'],
         'assassin' => ['nama' => 'Assassin', 'ikon' => '🗡️'],
         'mage' => ['nama' => 'Mage', 'ikon' => '🔮'],
         'healer' => ['nama' => 'Healer', 'ikon' => '✨'],
     ];
 }
-function rpg_tim_nama($t) { return $t === 1 ? 'Kiri' : ($t === 2 ? 'Kanan' : ''); }
+function rpg_tim_nama($t) { return $t === 1 ? 'Sky Heaven Guardians' : ($t === 2 ? 'Dark Earth Warriors' : ''); }
+// indeks unit: tim 1 = 0..3, tim 2 = 4..7 (tank, assassin, mage, healer); Fighter (opsional) = 8 (tim 1) dan 9 (tim 2)
 function rpg_unit_idx($tim, $peran)
 {
+    if (!in_array((int)$tim, [1, 2], true)) return -1;
+    if ($peran === 'fighter') return 8 + ((int)$tim - 1);
     $k = array_search($peran, rpg_peran_list(), true);
-    if ($k === false || !in_array((int)$tim, [1, 2], true)) return -1;
+    if ($k === false) return -1;
     return ((int)$tim - 1) * 4 + $k;
 }
+function rpg_unit_tim($i) { return $i < 8 ? intdiv($i, 4) + 1 : $i - 7; }
+function rpg_unit_peran($i) { return $i < 8 ? rpg_peran_list()[$i % 4] : 'fighter'; }
 
 // ---------- Database (tabel dibuat sendiri, sistem lama tidak disentuh) ----------
 function rpg_db()
@@ -112,17 +126,18 @@ function rpg_db()
 function rpg_stat_bawaan()
 {
     return [
-        'tank'     => ['hp' => 300, 'atk' => 24, 'def' => 12, 'heal' => 0],
-        'assassin' => ['hp' => 140, 'atk' => 75, 'def' => 5,  'heal' => 0],
-        'mage'     => ['hp' => 160, 'atk' => 55, 'def' => 6,  'heal' => 0],
-        'healer'   => ['hp' => 170, 'atk' => 30, 'def' => 8,  'heal' => 35],
+        'tank'     => ['hp' => 240, 'atk' => 24, 'def' => 12, 'heal' => 0],
+        'fighter'  => ['hp' => 175, 'atk' => 48, 'def' => 9,  'heal' => 0],
+        'assassin' => ['hp' => 110, 'atk' => 75, 'def' => 5,  'heal' => 0],
+        'mage'     => ['hp' => 125, 'atk' => 55, 'def' => 6,  'heal' => 0],
+        'healer'   => ['hp' => 135, 'atk' => 30, 'def' => 8,  'heal' => 30],
     ];
 }
 
 function rpg_cfg_bawaan()
 {
     return ['waktu_pilih' => 12, 'sumber_waktu' => 'soal', 'waktu_universal' => 15, 'ulang' => 2,
-        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'stat' => rpg_stat_bawaan()];
+        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'pakai_fighter' => false, 'stat' => rpg_stat_bawaan()];
 }
 
 function rpg_cfg_bersih($raw)
@@ -134,12 +149,12 @@ function rpg_cfg_bersih($raw)
     $o['sumber_waktu'] = (($raw['sumber_waktu'] ?? $d['sumber_waktu']) === 'universal') ? 'universal' : 'soal';
     $o['waktu_universal'] = max(5, min(180, (int)($raw['waktu_universal'] ?? $d['waktu_universal'])));
     $o['ulang'] = max(0, min(10, (int)($raw['ulang'] ?? $d['ulang'])));
-    foreach (['lanjut_otomatis', 'acak_opsi', 'peringkat'] as $k) {
+    foreach (['lanjut_otomatis', 'acak_opsi', 'peringkat', 'pakai_fighter'] as $k) {
         $o[$k] = array_key_exists($k, $raw) ? !empty($raw[$k]) : $d[$k];
     }
     $o['stat'] = [];
     $batas = ['hp' => [20, 5000], 'atk' => [1, 500], 'def' => [0, 300], 'heal' => [0, 1000]];
-    foreach (rpg_peran_list() as $p) {
+    foreach (rpg_peran_semua() as $p) {
         foreach ($batas as $k => $b) {
             $v = $raw['stat'][$p][$k] ?? $d['stat'][$p][$k];
             $o['stat'][$p][$k] = max($b[0], min($b[1], (int)$v));
@@ -207,14 +222,22 @@ function rpg_parse_soal($raw, array $jenis, &$err, $mode = 'biasa')
 function rpg_skill_katalog($peran, $tim = 1)
 {
     $basic = ['id' => 'basic', 'nama' => 'Serangan Dasar', 'ikon' => '⚔️', 'tgt' => 'musuh', 'cd' => 0,
-        'desc' => 'Menyerang 1 lawan, damage kecil. Tanpa cooldown.'];
+        'desc' => 'Menyerang 1 lawan dengan damage kecil (10%–20% attack, acak tiap giliran). Tanpa cooldown.'];
     switch ($peran) {
         case 'tank':
             return [
-                ['id' => 's1', 'nama' => 'Pasang Badan', 'ikon' => '🛡️', 'tgt' => 'sekutu', 'cd' => 0,
-                    'desc' => 'Pindah ke depan 1 anggota tim dan tangkis serangan untuknya: anggota itu TIDAK menerima damage, kamu menerima 10% dari damage itu. Tanpa cooldown.'],
+                ['id' => 's1', 'nama' => 'Pasang Badan', 'ikon' => '🛡️', 'tgt' => 'sekutu_lain', 'cd' => 0,
+                    'desc' => 'Pindah ke depan 1 TEMAN (bukan diri sendiri) dan tangkis serangan untuknya: teman itu TIDAK menerima damage, kamu menerima 10% dari damage itu. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Benteng Tim', 'ikon' => '🏰', 'tgt' => 'tidak', 'cd' => 2,
                     'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 20%. Cooldown 2 giliran.'],
+                $basic,
+            ];
+        case 'fighter':
+            return [
+                ['id' => 's1', 'nama' => 'Lompat Pelindung', 'ikon' => '🤸', 'tgt' => 'sekutu', 'cd' => 2,
+                    'desc' => 'Melompat ke depan 1 teman dan menangkis serangan untuknya: teman menerima 20% damage, kamu menerima 35%. Bila dipilih untuk diri sendiri, kamu menghindar dan hanya menerima 20%. Cooldown 2 giliran.'],
+                ['id' => 's2', 'nama' => 'Rentetan Pukulan', 'ikon' => '🥊', 'tgt' => 'musuh', 'cd' => 2,
+                    'desc' => 'Melompat ke 1 lawan: 4 pukulan beruntun (masing-masing 20% attack, total 80%), lalu melompat ke lawan lain (acak) dengan 1 pukulan 55% attack, lalu salto kembali. Cooldown 2 giliran.'],
                 $basic,
             ];
         case 'healer':
@@ -280,7 +303,8 @@ function rpg_target_sah(array $units, array $u, array $sk)
     foreach ($units as $x) {
         if ($x['hp'] <= 0) continue;
         $sama = (int)$x['tim'] === (int)$u['tim'];
-        if (($sk['tgt'] === 'sekutu') === $sama) $out[] = (int)$x['i'];
+        if ($sk['tgt'] === 'sekutu_lain' && (int)$x['i'] === (int)$u['i']) continue;   // tank tidak bisa memilih dirinya sendiri
+        if ((($sk['tgt'] === 'sekutu') || ($sk['tgt'] === 'sekutu_lain')) === $sama) $out[] = (int)$x['i'];
     }
     return $out;
 }
@@ -297,7 +321,9 @@ function rpg_pilihan_valid(array $units, array $u, $skillId, $target)
 // Pilihan acak (saat murid kehabisan waktu memilih)
 function rpg_pilihan_acak(array $units, array $u)
 {
-    $ada = array_values(array_filter(rpg_skill_tersedia($u), function ($s) { return $s['ok']; }));
+    $ada = array_values(array_filter(rpg_skill_tersedia($u), function ($s) use ($units, $u) {
+        return $s['ok'] && ($s['tgt'] === 'tidak' || rpg_target_sah($units, $u, $s));
+    }));
     if (!$ada) $ada = [rpg_skill_by_id($u, 'basic')];
     $sk = $ada[random_int(0, count($ada) - 1)];
     $tg = rpg_target_sah($units, $u, $sk);
@@ -329,27 +355,29 @@ function rpg_buat_sesi($game)
 }
 function rpg_pemain_semua($sid) { rpg_db(); return db_rows('SELECT * FROM rpg_pemain WHERE sesi_id=? ORDER BY id', [(int)$sid]); }
 
-// indeks unit => baris pemain (hanya yang tim & perannya sah; jika ganda, yang pertama)
+// indeks unit => baris pemain (hanya yang tim & perannya sah dan aktif; jika ganda, yang pertama)
 function rpg_slot_map($sid)
 {
+    $s = db_row('SELECT cfg FROM rpg_sesi WHERE id=?', [(int)$sid]);
+    $pakai = $s ? !empty(rpg_cfg_bersih(json_decode((string)$s['cfg'], true))['pakai_fighter']) : false;
     $m = [];
     foreach (rpg_pemain_semua($sid) as $p) {
         $i = rpg_unit_idx($p['tim'], $p['peran']);
-        if ($i >= 0 && !isset($m[$i])) $m[$i] = $p;
+        if ($i < 0 || ($i >= 8 && !$pakai) || isset($m[$i])) continue;
+        $m[$i] = $p;
     }
     ksort($m);
     return $m;
 }
+function rpg_jumlah_unit($cfg) { return !empty($cfg['pakai_fighter']) ? 10 : 8; }
 
 function rpg_bisa_mulai($sid)
 {
     $m = rpg_slot_map($sid);
+    $cfg = rpg_cfg_sesi(rpg_get($sid));
     $kosong = [];
-    for ($i = 0; $i < 8; $i++) {
-        if (!isset($m[$i])) {
-            $pi = rpg_peran_info()[rpg_peran_list()[$i % 4]];
-            $kosong[] = $pi['nama'] . ' ' . rpg_tim_nama(intdiv($i, 4) + 1);
-        }
+    for ($i = 0; $i < rpg_jumlah_unit($cfg); $i++) {
+        if (!isset($m[$i])) $kosong[] = rpg_peran_info()[rpg_unit_peran($i)]['nama'] . ' ' . rpg_tim_nama(rpg_unit_tim($i));
     }
     if ($kosong) return [false, 'Slot belum terisi: ' . implode(', ', $kosong) . '. Pilih murid untuk tiap peran atau tekan "Acak peran".'];
     return [true, ''];
@@ -358,13 +386,13 @@ function rpg_bisa_mulai($sid)
 function rpg_buat_unit(array $cfg)
 {
     $u = [];
-    foreach ([1, 2] as $t) {
-        foreach (rpg_peran_list() as $k => $peran) {
-            $st = $cfg['stat'][$peran];
-            $u[] = ['i' => ($t - 1) * 4 + $k, 'tim' => $t, 'peran' => $peran, 'hp' => (int)$st['hp'], 'mx' => (int)$st['hp'],
-                'atk' => (int)$st['atk'], 'def' => (int)$st['def'], 'heal' => (int)$st['heal'],
-                'cd' => ['s1' => 0, 's2' => 0], 'kutuk' => 0, 'siap' => 0];
-        }
+    $n = rpg_jumlah_unit($cfg);
+    for ($i = 0; $i < $n; $i++) {
+        $peran = rpg_unit_peran($i);
+        $st = $cfg['stat'][$peran];
+        $u[] = ['i' => $i, 'tim' => rpg_unit_tim($i), 'peran' => $peran, 'hp' => (int)$st['hp'], 'mx' => (int)$st['hp'],
+            'atk' => (int)$st['atk'], 'def' => (int)$st['def'], 'heal' => (int)$st['heal'],
+            'cd' => ['s1' => 0, 's2' => 0], 'kutuk' => 0, 'siap' => 0];
     }
     return $u;
 }
@@ -397,7 +425,7 @@ function rpg_mulai($game, $s)
         $data = json_decode((string)$game['data'], true) ?: [];
         $bank = array_values($data['soal'] ?? []);
         $n = count($bank);
-        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n, 'mode' => 'biasa'];
+        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n, 'mode' => 'biasa', 'fighter' => !empty($cfg['pakai_fighter'])];
         if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
             $antrian['mode'] = 'kategori'; $antrian['kat'] = [];
             foreach (rpg_peran_list() as $r) {
@@ -405,6 +433,7 @@ function rpg_mulai($game, $s)
                 foreach ($bank as $i => $x) if (($x['k'] ?? '') === $r) $antrian['kat'][$r][] = $i;
             }
             $antrian['n'] = min(array_map('count', $antrian['kat']));
+            if (!empty($cfg['pakai_fighter'])) $antrian['fseq'] = rpg_fseq($antrian['n'] * ((int)$cfg['ulang'] + 1));
         }
         db_q("UPDATE rpg_sesi SET status='pilih', ronde=0, unit=?, soal=?, antrian=?, ptr=0, kejadian='[]', riwayat='[]', pending='' WHERE id=?",
             [json_encode(rpg_buat_unit($cfg)), json_encode($bank, JSON_UNESCAPED_UNICODE), json_encode($antrian), (int)$s['id']]);
@@ -501,6 +530,18 @@ function rpg_mulai_soal($sid)
 // soal yang muncul dua kali pada pemain yang sama. Setelah N giliran = satu putaran; pengulangan (reset) memulai
 // putaran baru dengan acakan baru. Total giliran = N x (pengulangan + 1).
 function rpg_antrian($s) { $a = json_decode((string)$s['antrian'], true); return is_array($a) ? $a : ['seed' => 1, 'n' => 1]; }
+// Urutan kategori soal untuk Fighter: tiap 4 giliran keempat kategori muncul sekali (acak), kategori yang sama
+// tidak muncul berurutan, termasuk di batas blok.
+function rpg_fseq($total)
+{
+    $cats = rpg_peran_list(); $seq = []; $prev = null;
+    while (count($seq) < $total) {
+        do { $b = live_acak($cats); } while ($prev !== null && $b[0] === $prev);
+        foreach ($b as $c) $seq[] = $c;
+        $prev = end($b);
+    }
+    return array_slice($seq, 0, $total);
+}
 // giliran maksimum dari data game (dipakai formulir/API untuk perkiraan)
 function rpg_maks_dari_data(array $data, $ulang)
 {
@@ -524,14 +565,23 @@ function rpg_idx_soal($s, array $u, $r)
     $n = max(1, (int)$a['n']);
     $pass = intdiv($r - 1, $n);
     $q = ($r - 1) % $n + 1;
+    if (($a['mode'] ?? 'biasa') === 'kategori' && $u['peran'] === 'fighter') {
+        // Fighter: kategori bergilir (lihat rpg_fseq); soal diambil dari urutan acak khusus Fighter pada kategori itu
+        $seq = $a['fseq'] ?? [];
+        $cat = $seq[$r - 1] ?? 'tank';
+        $kc = count(array_filter(array_slice($seq, 0, $r - 1), function ($c) use ($cat) { return $c === $cat; }));
+        $list = $a['kat'][$cat] ?? [];
+        $perm = live_perm(count($list), crc32('f' . $a['seed'] . '.' . $cat));
+        return $list[$perm[$kc % max(1, count($list))]];
+    }
     if (($a['mode'] ?? 'biasa') === 'kategori') {
         // tiap kategori punya urutan acak sendiri; kedua tim mendapat soal kategori yang sama sesuai perannya
         $list = $a['kat'][$u['peran']] ?? [];
         $perm = live_perm(count($list), crc32('k' . $a['seed'] . '.' . $u['peran'] . '.' . $pass));
         return $list[$perm[$q - 1]];
     }
-    $pos = (int)array_search($u['peran'], rpg_peran_list(), true);
-    return live_anggota_idx($a['seed'] . '.' . $pass, $n, 4, (int)$u['tim'], $pos, $q);
+    $pos = $u['peran'] === 'fighter' ? 4 : (int)array_search($u['peran'], rpg_peran_list(), true);
+    return live_anggota_idx($a['seed'] . '.' . $pass, $n, !empty($a['fighter']) ? 5 : 4, (int)$u['tim'], $pos, $q);
 }
 
 // Murid memilih
@@ -619,12 +669,15 @@ function rpg_hitung_dalam($s)
 
     $dipakai = [];            // skill yang dipakai (cooldown) : i => [id, ...]
     $bayang = [];             // assassin yang sedang bayangan giliran ini
-    $lindung = [];            // i => pengali damage terkecil (Benteng Tim / tank melindungi dirinya)
-    $guard = [];              // sekutu => indeks tank yang pasang badan untuk dia
+    $lindung = [];            // i => pengali damage (Benteng Tim)
+    $tguard = [];             // sekutu => indeks tank yang pasang badan untuk dia
+    $fguard = [];             // sekutu => indeks fighter yang melompat melindunginya
+    $fself = [];              // fighter yang menghindar (melindungi diri sendiri)
     $kutukBaru = [];
     $st1 = []; $st2 = []; $st3 = [];
+    $hidupIdx = function ($t) use (&$units) { return isset($units[$t]) && $units[$t]['hp'] > 0; };
 
-    // 3. tahap buff (perisai, bayangan, kutukan) dan kegagalan
+    // 3. tahap buff (perisai, lompat pelindung, bayangan, kutukan) dan kegagalan
     foreach ($A as $i => $a) {
         $u = $units[$i]; $sk = $a['skill']; $ok = $a['ok'];
         if ($sk === 's1' || $sk === 's2') {
@@ -634,12 +687,14 @@ function rpg_hitung_dalam($s)
         if (!$ok) { $st2[] = ['k' => 'gagal', 'u' => $i, 's' => $sk]; continue; }
         if ($u['peran'] === 'tank' && $sk === 's1') {
             $t = $a['target'];
-            if ($t === $i) $lindung[$t] = min($lindung[$t] ?? 1, RPG_LINDUNG_1);   // melindungi diri sendiri
-            else $guard[$t] = $i;
-            $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'satu', 't' => $t];
+            if ($t !== $i && $hidupIdx($t)) { $tguard[$t] = $i; $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'satu', 't' => $t]; }
         } elseif ($u['peran'] === 'tank' && $sk === 's2') {
-            foreach ($units as $x) if ($x['tim'] === $u['tim'] && $x['hp'] > 0) $lindung[$x['i']] = min($lindung[$x['i']] ?? 1, RPG_LINDUNG_SEMUA);
+            foreach ($units as $x) if ($x['tim'] === $u['tim'] && $x['hp'] > 0) $lindung[$x['i']] = RPG_LINDUNG_SEMUA;
             $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'semua', 't' => -1];
+        } elseif ($u['peran'] === 'fighter' && $sk === 's1') {
+            $t = $a['target'];
+            if ($t === $i) { $fself[$i] = true; $st1[] = ['k' => 'lompat', 'u' => $i, 'm' => 'diri', 't' => $i]; }
+            elseif ($hidupIdx($t)) { $fguard[$t] = $i; $st1[] = ['k' => 'lompat', 'u' => $i, 'm' => 'teman', 't' => $t]; }
         } elseif ($u['peran'] === 'assassin' && $sk === 's2') {
             $bayang[$i] = true;
             $st1[] = ['k' => 'bayangan', 'u' => $i];
@@ -657,54 +712,101 @@ function rpg_hitung_dalam($s)
         $amt = $a['skill'] === 's1' ? (int)$u['heal'] : (int)round($u['heal'] * RPG_HEAL_SEMUA);
         $h = [];
         foreach ($tl as $t) {
-            if ($units[$t]['hp'] <= 0) continue;
+            if (!isset($units[$t]) || $units[$t]['hp'] <= 0) continue;
             $baru = min($units[$t]['mx'], $units[$t]['hp'] + $amt);
             $h[] = ['u' => $t, 'n' => $baru - $units[$t]['hp'], 'hp' => $baru];
             $units[$t]['hp'] = $baru;
         }
         $st2[] = ['k' => 'heal', 'u' => $i, 'm' => $a['skill'] === 's1' ? 'satu' : 'semua', 'h' => $h];
     }
+
+    // Damage yang tertuju ke $ti: Benteng Tim -> tank menangkis (10%) -> fighter melompat melindungi (sekutu 20%, fighter 35%,
+    // dan bila fighter dijaga tank, tank yang menerima bagian fighter) -> fighter menghindar (20%).
+    $kurangi = function ($idx, $dmg) use (&$units) { $real = min($dmg, $units[$idx]['hp']); $units[$idx]['hp'] -= $real; return $real; };
+    $infoTank = function ($gt, $dasar) use (&$units, $kurangi) {
+        $dt = max(1, (int)round($dasar * RPG_LINDUNG_1));
+        $real = $kurangi($gt, $dt);
+        $tk = ['u' => $gt, 'd' => $real, 'r' => $dt, 'hp' => $units[$gt]['hp']];
+        if ($units[$gt]['hp'] <= 0) $tk['ko'] = 1;
+        return $tk;
+    };
+    $hit = function ($ti, $raw) use (&$units, &$tguard, &$fguard, &$fself, &$lindung, $kurangi, $infoTank, $hidupIdx) {
+        $raw = max(1, (int)$raw);
+        $pr = $lindung[$ti] ?? 1;
+        if ($pr < 1) $raw = max(1, (int)round($raw * $pr));
+        $gt = $tguard[$ti] ?? null;
+        if ($gt !== null && $gt !== $ti && $hidupIdx($gt)) {
+            return ['u' => $ti, 'd' => 0, 'hp' => $units[$ti]['hp'], 'gd' => 1, 'tk' => $infoTank($gt, $raw)];
+        }
+        $fg = $fguard[$ti] ?? null;
+        if ($fg !== null && $fg !== $ti && $hidupIdx($fg)) {
+            $da = max(1, (int)round($raw * RPG_F_TEMAN));
+            $ra = $kurangi($ti, $da);
+            $row = ['u' => $ti, 'd' => $ra, 'r' => $da, 'hp' => $units[$ti]['hp']];
+            if ($units[$ti]['hp'] <= 0) $row['ko'] = 1;
+            $bag = max(1, (int)round($raw * RPG_F_DIRI));
+            $gt2 = $tguard[$fg] ?? null;
+            if ($gt2 !== null && $gt2 !== $fg && $hidupIdx($gt2)) {
+                $row['fgd'] = ['u' => $fg, 'd' => 0, 'r' => $bag, 'hp' => $units[$fg]['hp'], 'tk' => $infoTank($gt2, $bag)];
+            } else {
+                $rf = $kurangi($fg, $bag);
+                $row['fgd'] = ['u' => $fg, 'd' => $rf, 'r' => $bag, 'hp' => $units[$fg]['hp']];
+                if ($units[$fg]['hp'] <= 0) $row['fgd']['ko'] = 1;
+            }
+            return $row;
+        }
+        if (!empty($fself[$ti])) $raw = max(1, (int)round($raw * RPG_F_MENGHINDAR));
+        $real = $kurangi($ti, $raw);
+        $row = ['u' => $ti, 'd' => $real, 'r' => $raw, 'hp' => $units[$ti]['hp']];
+        if ($pr < 1) $row['pr'] = $pr;
+        if (!empty($fself[$ti])) $row['mh'] = 1;
+        if ($units[$ti]['hp'] <= 0) $row['ko'] = 1;
+        return $row;
+    };
+    $tembak = function ($ti, $raw, $n = 1) use (&$units, &$bayang, $hit) {
+        $tu = $units[$ti];
+        if (!empty($bayang[$ti])) return ['u' => $ti, 'd' => 0, 'hp' => $tu['hp'], 'bl' => 1, 'n' => $n];
+        if ($tu['hp'] <= 0) return ['u' => $ti, 'd' => 0, 'hp' => 0, 'ko' => 1, 'sdh' => 1, 'n' => $n];
+        $row = $hit($ti, $raw);
+        $row['n'] = $n;
+        return $row;
+    };
+    $hitung = function ($atkU, $mult, $ti) use (&$units) {   // (attack x pengali) - defend, minimal 1
+        return max(1, (int)round($atkU['atk'] * $mult - $units[$ti]['def']));
+    };
+
     // 5. serangan (urutan diacak, damage dihitung berurutan)
     $atk = [];
     foreach ($A as $i => $a) {
         $u = $units[$i];
         if (!$a['ok']) continue;
         $sk = $a['skill'];
-        if ($sk === 'basic') $atk[] = [$i, 'basic', RPG_BASIC, 'satu'];
+        if ($sk === 'basic') $atk[] = [$i, 'basic', random_int((int)(RPG_BASIC_MIN * 1000), (int)(RPG_BASIC_MAX * 1000)) / 1000, 'satu'];
         elseif ($u['peran'] === 'assassin' && $sk === 's1') $atk[] = [$i, 's1', RPG_ASSASSIN_1, 'satu'];
         elseif ($sk === 'strike') $atk[] = [$i, 'strike', RPG_STRIKE, 'satu'];
         elseif ($u['peran'] === 'mage' && $sk === 's1') $atk[] = [$i, 's1', RPG_AOE, 'semua'];
+        elseif ($u['peran'] === 'fighter' && $sk === 's2') $atk[] = [$i, 'f2', 0, 'kombo'];
     }
     $atk = rpg_acak_urut($atk);
     foreach ($atk as $x) {
         list($i, $sk, $mult, $mode) = $x;
         $u = $units[$i];
-        $tl = $mode === 'semua'
-            ? array_values(array_map(function ($y) { return $y['i']; }, array_filter($units, function ($y) use ($u) { return $y['tim'] !== $u['tim'] && $y['hp'] > 0; })))
-            : [$A[$i]['target']];
         $t = [];
-        foreach ($tl as $ti) {
-            $tu = $units[$ti];
-            if (!empty($bayang[$ti])) { $t[] = ['u' => $ti, 'd' => 0, 'hp' => $tu['hp'], 'bl' => 1]; continue; }
-            if ($tu['hp'] <= 0) { $t[] = ['u' => $ti, 'd' => 0, 'hp' => 0, 'ko' => 1, 'sdh' => 1]; continue; }
-            $d = max(1, (int)round($u['atk'] * $mult - $tu['def']));
-            if (isset($guard[$ti]) && $units[$guard[$ti]]['hp'] > 0) {   // tank menangkis: sasaran 0 damage, tank terima 10%
-                $gi = $guard[$ti];
-                $dt = max(1, (int)round($d * RPG_LINDUNG_1));
-                $real = min($dt, $units[$gi]['hp']);
-                $units[$gi]['hp'] -= $real;
-                $tk = ['u' => $gi, 'd' => $real, 'r' => $dt, 'hp' => $units[$gi]['hp']];
-                if ($units[$gi]['hp'] <= 0) $tk['ko'] = 1;
-                $t[] = ['u' => $ti, 'd' => 0, 'hp' => $tu['hp'], 'gd' => 1, 'tk' => $tk];
-                continue;
+        if ($mode === 'semua') {
+            foreach ($units as $y) {
+                if ($y['tim'] === $u['tim'] || $y['hp'] <= 0) continue;
+                $t[] = $tembak($y['i'], $hitung($u, $mult, $y['i']));
             }
-            $pr = $lindung[$ti] ?? 1;
-            if ($pr < 1) $d = max(1, (int)round($d * $pr));
-            $units[$ti]['hp'] = max(0, $tu['hp'] - $d);
-            $row = ['u' => $ti, 'd' => min($d, $tu['hp']), 'r' => $d, 'hp' => $units[$ti]['hp']];
-            if ($pr < 1) $row['pr'] = $pr;
-            if ($units[$ti]['hp'] <= 0) $row['ko'] = 1;
-            $t[] = $row;
+        } elseif ($mode === 'kombo') {   // Fighter: 4 pukulan (4 x 20%) ke lawan pertama, lalu 1 pukulan 55% ke lawan lain
+            $t1 = $A[$i]['target'];
+            $total = max(RPG_F_PUKUL_N, (int)round($u['atk'] * RPG_F_PUKUL * RPG_F_PUKUL_N - $units[$t1]['def']));   // selisih defend dihitung sekali
+            $t[] = $tembak($t1, $total, RPG_F_PUKUL_N);
+            $lain = array_values(array_map(function ($y) { return $y['i']; }, array_filter($units, function ($y) use ($u, $t1) { return $y['tim'] !== $u['tim'] && $y['hp'] > 0 && $y['i'] !== $t1; })));
+            $t2 = $lain ? $lain[random_int(0, count($lain) - 1)] : $t1;
+            $t[] = $tembak($t2, $hitung($u, RPG_F_SUSUL, $t2), 1);
+        } else {
+            $ti = $A[$i]['target'];
+            $t[] = $tembak($ti, $hitung($u, $mult, $ti));
         }
         $st3[] = ['k' => 'serang', 'u' => $i, 's' => $sk, 'm' => $mode, 't' => $t];
     }
@@ -744,6 +846,7 @@ function rpg_hitung_dalam($s)
         $pending = json_encode(['pemenang' => $w, 'alasan' => $w === 3 ? 'seri' : 'habis']);
     }
     $dur = 1.5 + (count($st1) ? 2.4 : 0) + (count($st2) ? 2.4 : 0) + count($st3) * 2.7 + ($ko ? 1.8 : 0) + 2.0;
+    foreach ($st3 as $e3) if ($e3['s'] === 'f2') $dur += 2.2;
     $dur = max(5.0, min(60.0, $dur));
     $riw = json_decode((string)$s['riwayat'], true) ?: [];
     $riw[] = ['r' => $r, 'ev' => $ev];
