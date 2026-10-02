@@ -116,8 +116,9 @@ $link = game_link($u['username'], $g['slug']);
   </div>
   <div id="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
 </div>
-<div id="ctl"><button id="b-suara">🔇 Aktifkan suara</button><button id="b-fs">⛶ Layar penuh</button></div>
+<div id="ctl"><button id="b-suara">🔇 Aktifkan suara</button><button id="b-musik" title="Musik latar (tombol ini hanya membisukan musik, efek suara tidak ikut)">🎵 Musik: mulai</button><button id="b-fs">⛶ Layar penuh</button></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="<?= e(url('assets/js/rg-musik.js')) ?>"></script>
 <script>
 (function(){
   var GAME = <?= (int)$g['id'] ?>, LINK = <?= json_encode($link) ?>;
@@ -565,6 +566,21 @@ $link = game_link($u['username'], $g['slug']);
     seri: function(){ nada(440,.3,'triangle',.2); nada(440,.5,'triangle',.2,.35); }
   };
   $('b-suara').onclick = function(){ suaraOn = !suaraOn; if (suaraOn) { ac(); if (ctx && ctx.resume) ctx.resume(); sfx.tik(); } this.textContent = suaraOn ? '🔊 Suara aktif' : '🔇 Aktifkan suara'; };
+  // musik latar: berulang terus; tombol khusus untuk membisukan musik saja (efek suara tidak terpengaruh)
+  var musikBtn = $('b-musik'), musikMute = false;
+  try { musikMute = localStorage.getItem('rg_musik_mute') === '1'; } catch(e){}
+  function musikUI(){ musikBtn.textContent = !RGMusic.playing ? '🎵 Musik: mulai' : (musikMute ? '🔇 Musik: bisu' : '🎵 Musik: hidup'); }
+  RGMusic.onstate = musikUI;
+  RGMusic.progress = function(p){ if (!RGMusic.buffer) musikBtn.textContent = '🎵 Menyiapkan ' + Math.round(p*100) + '%'; };
+  function musikMulai(){ RGMusic.setMuted(musikMute); RGMusic.play(); }
+  musikBtn.onclick = function(){
+    if (!RGMusic.playing) { musikMulai(); return; }
+    musikMute = !musikMute; RGMusic.setMuted(musikMute); musikUI();
+    try { localStorage.setItem('rg_musik_mute', musikMute ? '1' : '0'); } catch(e){}
+  };
+  // mengaktifkan suara untuk pertama kali sekaligus menyalakan musik latar (kecuali sebelumnya dibisukan)
+  $('b-suara').addEventListener('click', function(){ if (suaraOn && !RGMusic.playing && !musikMute) musikMulai(); });
+  musikUI();
   $('b-fs').onclick = function(){ var d = document.documentElement; if (document.fullscreenElement) document.exitFullscreen(); else if (d.requestFullscreen) d.requestFullscreen(); };
 
   // ================= ANIMASI AKSI =================
