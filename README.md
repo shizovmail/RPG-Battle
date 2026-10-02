@@ -162,6 +162,7 @@ Kesimpulan:
 Musik RPG (`assets/js/rg-musik.js`, ±5 KB, disintesis browser, tanpa file audio, durasi ±76 detik lalu **mengulang terus**) hanya diputar di **layar proyektor**, bukan di HP murid.
 Tekan **🔇 Aktifkan suara** (sekali, karena browser mewajibkan klik) — musik ikut menyala; atau tombol **🎵 Musik** di pojok kanan bawah. Tombol 🎵 berikutnya **membisukan/menyalakan musik saja**
 (efek suara animasi tidak ikut). Pilihan bisu diingat. Musik berhenti sementara bila tab layar proyektor disembunyikan.
+Keseimbangan sudah diukur (`SFX_VOL` di `guru/rpg_layar.php`, `RGMusic.vol` di `assets/js/rg-musik.js`): musik ±−21 dBFS, efek animasi puncaknya 6–13 dB di atas musik (kemenangan 17 dB), campuran 3 efek + musik tidak clipping (puncak −5 dBFS).
 Suara keluar lewat perangkat audio yang dipakai browser (speaker laptop, atau speaker/HDMI proyektor bila itu output yang dipilih di laptop); volumenya mengikuti volume laptop.
 
 ### Kebutuhan soal

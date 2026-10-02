@@ -530,15 +530,16 @@ $link = game_link($u['username'], $g['slug']);
   }
 
   // ================= SUARA =================
-  var ctx = null, suaraOn = false;
+  var ctx = null, suaraOn = false, sfxMaster = null, SFX_VOL = 1.8;   // SFX_VOL = penyeimbang efek terhadap musik latar (hasil uji: efek ±+5 dB dari semula, musik .38)
   function ac(){ if (!ctx) { try { ctx = new (window.AudioContext||window.webkitAudioContext)(); } catch(e){} } return ctx; }
+  function keluar(){ if (!sfxMaster) { sfxMaster = ctx.createGain(); sfxMaster.gain.value = SFX_VOL; sfxMaster.connect(ctx.destination); } return sfxMaster; }
   function nada(f, d, tipe, vol, tunda, f2){
     if (!suaraOn || !ac()) return;
     var t = ctx.currentTime + (tunda||0), o = ctx.createOscillator(), g = ctx.createGain();
     o.type = tipe||'sine'; o.frequency.setValueAtTime(f, t);
     if (f2) o.frequency.exponentialRampToValueAtTime(f2, t+d);
     g.gain.setValueAtTime(vol||.15, t); g.gain.exponentialRampToValueAtTime(.001, t+d);
-    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t+d+.02);
+    o.connect(g); g.connect(keluar()); o.start(t); o.stop(t+d+.02);
   }
   function derau(d, vol, tunda, fr){
     if (!suaraOn || !ac()) return;
@@ -546,7 +547,7 @@ $link = game_link($u['username'], $g['slug']);
     for (var i=0;i<n;i++) a[i] = (Math.random()*2-1) * (1 - i/n);
     var s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
     s.buffer = b; f.type='bandpass'; f.frequency.value = fr||1200; g.gain.value = vol||.25;
-    s.connect(f); f.connect(g); g.connect(ctx.destination); s.start(ctx.currentTime+(tunda||0));
+    s.connect(f); f.connect(g); g.connect(keluar()); s.start(ctx.currentTime+(tunda||0));
   }
   var sfx = {
     mulai: function(){ nada(392,.18,'triangle',.2); nada(523,.18,'triangle',.2,.2); nada(784,.5,'triangle',.22,.4); },
@@ -565,6 +566,7 @@ $link = game_link($u['username'], $g['slug']);
     menang: function(){ [523,659,784,1047].forEach(function(f,i){ nada(f,.35,'triangle',.2,i*.16); }); nada(1047,.9,'triangle',.2,.7); derau(2,.25,.2,2500); },
     seri: function(){ nada(440,.3,'triangle',.2); nada(440,.5,'triangle',.2,.35); }
   };
+  window.RGSfx = sfx;
   $('b-suara').onclick = function(){ suaraOn = !suaraOn; if (suaraOn) { ac(); if (ctx && ctx.resume) ctx.resume(); sfx.tik(); } this.textContent = suaraOn ? '🔊 Suara aktif' : '🔇 Aktifkan suara'; };
   // musik latar: berulang terus; tombol khusus untuk membisukan musik saja (efek suara tidak terpengaruh)
   var musikBtn = $('b-musik'), musikMute = false;
