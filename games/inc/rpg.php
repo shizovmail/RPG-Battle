@@ -144,7 +144,7 @@ function rpg_stat_bawaan()
 function rpg_cfg_bawaan()
 {
     return ['waktu_pilih' => 12, 'sumber_waktu' => 'soal', 'waktu_universal' => 15, 'ulang' => 2,
-        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'pakai_fighter' => false, 'stat' => rpg_stat_bawaan()];
+        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'pakai_fighter' => false, 'soal_per_putaran' => 0, 'stat' => rpg_stat_bawaan()];
 }
 
 function rpg_cfg_bersih($raw)
@@ -156,6 +156,7 @@ function rpg_cfg_bersih($raw)
     $o['sumber_waktu'] = (($raw['sumber_waktu'] ?? $d['sumber_waktu']) === 'universal') ? 'universal' : 'soal';
     $o['waktu_universal'] = max(5, min(180, (int)($raw['waktu_universal'] ?? $d['waktu_universal'])));
     $o['ulang'] = max(0, min(10, (int)($raw['ulang'] ?? $d['ulang'])));
+    $o['soal_per_putaran'] = max(0, min(500, (int)($raw['soal_per_putaran'] ?? $d['soal_per_putaran'])));   // 0 = semua soal
     foreach (['lanjut_otomatis', 'acak_opsi', 'peringkat', 'pakai_fighter'] as $k) {
         $o[$k] = array_key_exists($k, $raw) ? !empty($raw[$k]) : $d[$k];
     }
@@ -432,15 +433,26 @@ function rpg_mulai($game, $s)
         $data = json_decode((string)$game['data'], true) ?: [];
         $bank = array_values($data['soal'] ?? []);
         $n = count($bank);
-        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $n, 'mode' => 'biasa', 'fighter' => !empty($cfg['pakai_fighter'])];
-        if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
-            $antrian['mode'] = 'kategori'; $antrian['kat'] = [];
+        $kategori = ($data['mode_soal'] ?? 'biasa') === 'kategori';
+        $L = rpg_panjang_putaran($data, (int)$cfg['soal_per_putaran']);
+        $putaran = (int)$cfg['ulang'] + 1;
+        $antrian = ['seed' => random_int(1, 2000000000), 'n' => $L, 'mode' => $kategori ? 'kategori' : 'biasa', 'fighter' => !empty($cfg['pakai_fighter'])];
+        $kolam = [];
+        if ($kategori) {
             foreach (rpg_peran_list() as $r) {
-                $antrian['kat'][$r] = [];
-                foreach ($bank as $i => $x) if (($x['k'] ?? '') === $r) $antrian['kat'][$r][] = $i;
+                $kolam[$r] = [];
+                foreach ($bank as $i => $x) if (($x['k'] ?? '') === $r) $kolam[$r][] = $i;
             }
-            $antrian['n'] = min(array_map('count', $antrian['kat']));
-            if (!empty($cfg['pakai_fighter'])) $antrian['fseq'] = rpg_fseq($antrian['n'] * ((int)$cfg['ulang'] + 1));
+            $antrian['kat'] = $kolam;
+            if (!empty($cfg['pakai_fighter'])) $antrian['fseq'] = rpg_fseq($L * $putaran);
+        } else {
+            $kolam['*'] = $n ? range(0, $n - 1) : [];
+        }
+        // Soal yang dipakai tiap putaran: utamakan soal yang paling jarang/ belum pernah muncul di putaran sebelumnya,
+        // sisanya diacak; jadi seluruh bank tetap terpakai bergantian walau tiap putaran hanya memakai $L soal.
+        $pakai = []; $antrian['susun'] = [];
+        for ($pu = 0; $pu < $putaran; $pu++) {
+            foreach ($kolam as $nm => $lst) $antrian['susun'][$pu][$nm] = rpg_susun_putaran($lst, $L, $pakai[$nm]);
         }
         db_q("UPDATE rpg_sesi SET status='pilih', ronde=0, unit=?, soal=?, antrian=?, ptr=0, kejadian='[]', riwayat='[]', pending='' WHERE id=?",
             [json_encode(rpg_buat_unit($cfg)), json_encode($bank, JSON_UNESCAPED_UNICODE), json_encode($antrian), (int)$s['id']]);
@@ -536,7 +548,45 @@ function rpg_mulai_soal($sid)
 // Dasar: persegi Latin siklik => selama N giliran (N = jumlah soal) tiap pemain mendapat N soal berbeda, jadi tidak ada
 // soal yang muncul dua kali pada pemain yang sama. Setelah N giliran = satu putaran; pengulangan (reset) memulai
 // putaran baru dengan acakan baru. Total giliran = N x (pengulangan + 1).
-function rpg_antrian($s) { $a = json_decode((string)$s['antrian'], true); return is_array($a) ? $a : ['seed' => 1, 'n' => 1]; }
+function rpg_antrian($s)
+{
+    $a = json_decode((string)$s['antrian'], true);
+    if (!is_array($a)) $a = ['seed' => 1, 'n' => 1];
+    if (!isset($a['susun'])) {   // sesi lama: pakai seluruh soal tiap putaran
+        $a['susun'] = [];
+        for ($pu = 0; $pu < 12; $pu++) {
+            if (($a['mode'] ?? 'biasa') === 'kategori') foreach ($a['kat'] ?? [] as $r => $lst) $a['susun'][$pu][$r] = array_slice($lst, 0, max(1, (int)$a['n']));
+            else $a['susun'][$pu]['*'] = $a['n'] > 0 ? range(0, (int)$a['n'] - 1) : [];
+        }
+    }
+    return $a;
+}
+// Panjang satu putaran (jumlah giliran per putaran = jumlah soal yang dipakai).
+// Model biasa: jumlah soal pengaturan (0 = semua). Model kategori: 0 = sebanyak kategori tersedikit; angka lain dibatasi kategori tersedikit.
+function rpg_panjang_putaran(array $data, $jumlah)
+{
+    $bank = array_values($data['soal'] ?? []);
+    $n = count($bank);
+    if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
+        $nmin = PHP_INT_MAX;
+        foreach (rpg_peran_list() as $r) $nmin = min($nmin, count(array_filter($bank, function ($x) use ($r) { return ($x['k'] ?? '') === $r; })));
+        if ($nmin === PHP_INT_MAX) $nmin = 0;
+        $L = $jumlah > 0 ? min((int)$jumlah, $nmin) : $nmin;
+        return max(min(4, $nmin), $L);
+    }
+    if ($jumlah <= 0 || $jumlah >= $n) return $n;
+    return max(min(8, $n), (int)$jumlah);
+}
+// Pilih $L soal untuk satu putaran dari kolam: yang paling jarang dipakai lebih dulu (acak di antara yang sama), lalu urutannya diacak.
+function rpg_susun_putaran(array $kolam, $L, &$pakai)
+{
+    $pakai = is_array($pakai) ? $pakai : [];
+    $kolam = live_acak($kolam);
+    usort($kolam, function ($a, $b) use ($pakai) { return ($pakai[$a] ?? 0) <=> ($pakai[$b] ?? 0); });   // stabil (PHP 8)
+    $pilih = array_slice($kolam, 0, min($L, count($kolam)));
+    foreach ($pilih as $i) $pakai[$i] = ($pakai[$i] ?? 0) + 1;
+    return array_values(live_acak($pilih));
+}
 // Urutan kategori soal untuk Fighter: tiap 4 giliran keempat kategori muncul sekali (acak), kategori yang sama
 // tidak muncul berurutan, termasuk di batas blok.
 function rpg_fseq($total)
@@ -550,15 +600,9 @@ function rpg_fseq($total)
     return array_slice($seq, 0, $total);
 }
 // giliran maksimum dari data game (dipakai formulir/API untuk perkiraan)
-function rpg_maks_dari_data(array $data, $ulang)
+function rpg_maks_dari_data(array $data, $ulang, $jumlah = 0)
 {
-    $bank = array_values($data['soal'] ?? []);
-    $n = count($bank);
-    if (($data['mode_soal'] ?? 'biasa') === 'kategori') {
-        $n = PHP_INT_MAX;
-        foreach (rpg_peran_list() as $r) $n = min($n, count(array_filter($bank, function ($x) use ($r) { return ($x['k'] ?? '') === $r; })));
-    }
-    return $n * ((int)$ulang + 1);
+    return rpg_panjang_putaran($data, (int)$jumlah) * ((int)$ulang + 1);
 }
 function rpg_giliran_maks($s)
 {
@@ -569,26 +613,24 @@ function rpg_giliran_maks($s)
 function rpg_idx_soal($s, array $u, $r)
 {
     $a = rpg_antrian($s);
-    $n = max(1, (int)$a['n']);
-    $pass = intdiv($r - 1, $n);
-    $q = ($r - 1) % $n + 1;
-    if (($a['mode'] ?? 'biasa') === 'kategori' && $u['peran'] === 'fighter') {
-        // Fighter: kategori bergilir (lihat rpg_fseq); soal diambil dari urutan acak khusus Fighter pada kategori itu
-        $seq = $a['fseq'] ?? [];
-        $cat = $seq[$r - 1] ?? 'tank';
-        $kc = count(array_filter(array_slice($seq, 0, $r - 1), function ($c) use ($cat) { return $c === $cat; }));
-        $list = $a['kat'][$cat] ?? [];
-        $perm = live_perm(count($list), crc32('f' . $a['seed'] . '.' . $cat));
-        return $list[$perm[$kc % max(1, count($list))]];
-    }
+    $L = max(1, (int)$a['n']);
+    $pass = intdiv($r - 1, $L);
+    $q = ($r - 1) % $L + 1;
+    $S = $a['susun'][$pass] ?? end($a['susun']);
     if (($a['mode'] ?? 'biasa') === 'kategori') {
-        // tiap kategori punya urutan acak sendiri; kedua tim mendapat soal kategori yang sama sesuai perannya
-        $list = $a['kat'][$u['peran']] ?? [];
-        $perm = live_perm(count($list), crc32('k' . $a['seed'] . '.' . $u['peran'] . '.' . $pass));
-        return $list[$perm[$q - 1]];
+        if ($u['peran'] === 'fighter') {
+            // Fighter: kategori bergilir (rpg_fseq); soal dari kategori itu dalam putaran ini, urutan dibalik agar berbeda dari pemilik kategori
+            $seq = $a['fseq'] ?? [];
+            $cat = $seq[$r - 1] ?? 'tank';
+            $kc = count(array_filter(array_slice($seq, $pass * $L, ($r - 1) - $pass * $L), function ($c) use ($cat) { return $c === $cat; }));
+            $list = array_reverse($S[$cat] ?? []);
+            return $list[$kc % max(1, count($list))];
+        }
+        return ($S[$u['peran']] ?? [0])[$q - 1] ?? 0;   // tiap peran memakai soal kategorinya, sama di kedua tim
     }
+    $D = $S['*'];
     $pos = $u['peran'] === 'fighter' ? 4 : (int)array_search($u['peran'], rpg_peran_list(), true);
-    return live_anggota_idx($a['seed'] . '.' . $pass, $n, !empty($a['fighter']) ? 5 : 4, (int)$u['tim'], $pos, $q);
+    return $D[live_anggota_idx($a['seed'] . '.' . $pass, $L, !empty($a['fighter']) ? 5 : 4, (int)$u['tim'], $pos, $q)];
 }
 
 // Murid memilih

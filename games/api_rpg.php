@@ -296,7 +296,8 @@ function rpg_gstate($game, $s)
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'pemenang' => (int)$s['pemenang'], 'akhir' => rpg_akhir_info($s),
         'n_riw' => count(json_decode((string)$s['riwayat'], true) ?: []),
-        'perkiraan' => rpg_maks_dari_data(json_decode((string)$game['data'], true) ?: [], (int)$cfg['ulang']),
+        'perkiraan' => rpg_maks_dari_data(json_decode((string)$game['data'], true) ?: [], (int)$cfg['ulang'], (int)$cfg['soal_per_putaran']),
+        'putaran' => rpg_panjang_putaran(json_decode((string)$game['data'], true) ?: [], (int)$cfg['soal_per_putaran']),
     ];
     if (in_array($s['status'], ['hasil', 'selesai'], true) || ($s['status'] === 'jeda' && $s['sblm'] === 'hasil')) {
         $r['kejadian'] = json_decode((string)$s['kejadian'], true) ?: [];

@@ -150,6 +150,7 @@ page_header('Panel wasit', 'guru/game.php');
       +'<label>Waktu memilih target & skill (detik)<input type="number" data-c="waktu_pilih" min="5" max="60" value="'+c.waktu_pilih+'"></label>'
       +'<label>Durasi menjawab soal<select data-c="sumber_waktu"><option value="soal"'+(c.sumber_waktu==='soal'?' selected':'')+'>Pakai durasi bawaan tiap soal</option><option value="universal"'+(c.sumber_waktu==='universal'?' selected':'')+'>Pakai durasi universal</option></select></label>'
       +'<label>Durasi universal (detik)<input type="number" data-c="waktu_universal" min="5" max="180" value="'+c.waktu_universal+'"></label>'
+      +'<label>Jumlah soal dipakai tiap putaran (0 = semua)<input type="number" data-c="soal_per_putaran" min="0" max="500" value="'+c.soal_per_putaran+'"></label>'
       +'<label>Pengulangan soal jika soal habis (kali)<input type="number" data-c="ulang" min="0" max="10" value="'+c.ulang+'"></label></div>'
       +'<label class="check"><input type="checkbox" data-c="pakai_fighter"'+(c.pakai_fighter?' checked':'')+'> <b>Pakai karakter Fighter (5 vs 5)</b> — tiap tim mendapat satu Fighter tambahan</label>'
       +'<label class="check"><input type="checkbox" data-c="lanjut_otomatis"'+(c.lanjut_otomatis?' checked':'')+'> Lanjut otomatis ke giliran berikutnya setelah animasi hasil</label>'
@@ -163,7 +164,7 @@ page_header('Panel wasit', 'guru/game.php');
       });
       h += '</tr>';
     });
-    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Bank '+BANK+' soal ⇒ paling lama '+j.perkiraan+' giliran (tiap giliran satu soal per pemain, sama untuk kedua tim).</p><p class="small muted" id="cfg-ok"></p>';
+    h += '</table></div><p class="small muted">Damage = (Attack × pengali skill) − Defend lawan (minimal 1). Bank '+BANK+' soal, '+j.putaran+' soal dipakai per putaran ⇒ paling lama '+j.perkiraan+' giliran (tiap giliran satu soal per pemain, sama untuk kedua tim).</p><p class="small muted" id="cfg-ok"></p>';
     document.getElementById('cfg').innerHTML = h;
     var t = 0;
     function kirim(){

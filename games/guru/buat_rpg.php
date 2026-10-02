@@ -141,6 +141,8 @@ Bilangan prima terkecil | 2 | dua</pre>
         <small>Guru bebas memilih. Durasi per soal diisi pada bank soal di atas (bawaan 15 detik).</small></label>
       <label>Durasi universal (detik)<input type="number" name="p[waktu_universal]" min="5" max="180" value="<?= (int)$cfg['waktu_universal'] ?>">
         <small>Dipakai hanya jika memilih "durasi universal".</small></label>
+      <label>Jumlah soal dipakai tiap putaran (0 = semua)<input type="number" name="p[soal_per_putaran]" min="0" max="500" value="<?= (int)$cfg['soal_per_putaran'] ?>">
+        <small>0 = semua soal dipakai. Model kategori: 0 atau angka melebihi batas = sebanyak kategori dengan soal paling sedikit (mis. 10/12/11/18 soal ⇒ 10 soal per putaran). Soal lain tetap ikut diacak dan didahulukan pada putaran berikutnya.</small></label>
       <label>Pengulangan soal jika soal habis (kali)<input type="number" name="p[ulang]" min="0" max="10" value="<?= (int)$cfg['ulang'] ?>">
         <small>Jika soal habis dan belum ada tim yang tumbang, soal diacak dan diulang sebanyak ini. Setelah itu pemenang = tim dengan karakter hidup lebih banyak; jika sama, total HP lebih besar.</small></label>
     </div>
@@ -222,14 +224,14 @@ Bilangan prima terkecil | 2 | dua</pre>
   }
   function hitung(arr){ return arr.filter(function(s){ return (s.q||'').trim(); }).length; }
   function perkiraan(){
-    var ul = +document.querySelector('[name="p[ulang]"]').value || 0, h, maks, kurang;
+    var ul = +document.querySelector('[name="p[ulang]"]').value || 0, J = +document.querySelector('[name="p[soal_per_putaran]"]').value || 0, h, maks, kurang;
     if (MODE === 'kategori') {
-      var c = ORDER.map(function(r){ return hitung(KAT[r]); }), n = Math.min.apply(null, c); maks = n * (ul + 1);
-      h = 'Soal per kategori: ' + ORDER.map(function(r, i){ return PERAN[r] + ' <b>' + c[i] + '</b>'; }).join(' · ') + ' ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (dibatasi kategori tersedikit, ' + n + ' soal).';
+      var c = ORDER.map(function(r){ return hitung(KAT[r]); }), n = Math.min.apply(null, c), L = J > 0 ? Math.max(Math.min(4, n), Math.min(J, n)) : n; maks = L * (ul + 1);
+      h = 'Soal per kategori: ' + ORDER.map(function(r, i){ return PERAN[r] + ' <b>' + c[i] + '</b>'; }).join(' · ') + ' ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (' + L + ' soal per putaran; batas kategori tersedikit ' + n + ').';
       kurang = n < 4 ? ' <span style="color:#d64545">Tiap kategori minimal 4 soal.</span>' : (n < 12 ? ' <span style="color:#b98410">Disarankan minimal 12–15 soal per kategori.</span>' : '');
     } else {
-      var n2 = hitung(SOAL); maks = n2 * (ul + 1);
-      h = 'Bank soal: <b>' + n2 + '</b> soal · dengan ' + ul + ' kali pengulangan ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (tiap pemain mendapat ' + n2 + ' soal berbeda per putaran).';
+      var n2 = hitung(SOAL), L2 = (J <= 0 || J >= n2) ? n2 : Math.max(Math.min(8, n2), J); maks = L2 * (ul + 1);
+      h = 'Bank soal: <b>' + n2 + '</b> soal · dengan ' + ul + ' kali pengulangan ⇒ pertandingan paling lama <b>' + maks + ' giliran</b> (' + L2 + ' soal per putaran, tiap pemain mendapat soal berbeda per putaran).';
       kurang = n2 < 8 ? ' <span style="color:#d64545">Minimal 8 soal.</span>' : (n2 < 16 ? ' <span style="color:#b98410">Disarankan minimal 16–20 soal agar pertarungan cukup panjang.</span>' : '');
     }
     document.getElementById('perkiraan').innerHTML = h + kurang;
@@ -305,6 +307,7 @@ Bilangan prima terkecil | 2 | dua</pre>
     };
   });
   document.querySelector('[name="p[ulang]"]').oninput = perkiraan;
+  document.querySelector('[name="p[soal_per_putaran]"]').oninput = perkiraan;
   document.getElementById('tambah-soal').onclick = function(){
     tambah({t: tipeBawaan(), q: '', o: [], b: 0, j: '', w: 15}); render();
     var t = list.querySelectorAll('[data-q]'); t[t.length-1].focus();
