@@ -156,11 +156,11 @@ page_header('Panel wasit', 'guru/game.php');
       +'<label class="check"><input type="checkbox" data-c="lanjut_otomatis"'+(c.lanjut_otomatis?' checked':'')+'> Lanjut otomatis ke giliran berikutnya setelah animasi hasil</label>'
       +'<label class="check"><input type="checkbox" data-c="acak_opsi"'+(c.acak_opsi?' checked':'')+'> Acak posisi pilihan jawaban</label>'
       +'<label class="check"><input type="checkbox" data-c="peringkat"'+(c.peringkat?' checked':'')+'> Tampilkan peringkat murid di akhir</label>'
-      +'<h3 style="margin-top:14px">Stat tiap peran</h3><div style="overflow:auto"><table class="stat-tabel"><tr><th>Peran</th><th>HP</th><th>Attack</th><th>Defend</th><th>Heal</th></tr>';
+      +'<h3 style="margin-top:14px">Stat tiap peran</h3><div style="overflow:auto"><table class="stat-tabel"><tr><th>Peran</th><th>HP</th><th>Attack</th><th>Defend</th></tr>';
     ORDER.forEach(function(p){
       h += '<tr><td><b>'+PERAN[p][1]+' '+PERAN[p][0]+'</b></td>';
-      ['hp','atk','def','heal'].forEach(function(k){
-        h += '<td>'+(k==='heal'&&p!=='healer' ? '<span class="muted">—</span>' : '<input type="number" data-s="'+p+'.'+k+'" min="0" value="'+st[p][k]+'">')+'</td>';
+      ['hp','atk','def'].forEach(function(k){
+        h += '<td><input type="number" data-s="'+p+'.'+k+'" min="0" value="'+st[p][k]+'"></td>';
       });
       h += '</tr>';
     });

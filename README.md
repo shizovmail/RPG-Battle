@@ -73,75 +73,77 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 
 | Peran | Serangan dasar (tanpa cooldown) | Skill 1 | Skill 2 |
 |---|---|---|---|
-| 🛡️ Tank | 10–20% Attack | **Pasang Badan**: pindah ke depan 1 **teman** (bukan diri sendiri); teman **0 damage**, tank menerima **5–15%** damage itu · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk **15–25%** (acak per anggota) · cooldown 2 |
-| 🥊 Fighter | 15–35% Attack | **Lompat Pelindung**: melompat ke depan 1 teman: teman menerima **5–25%**, fighter **10–40%**. Dipilih untuk diri sendiri ⇒ menghindar, menerima **5–25%**. Bila tank menjaga, tank yang menerima · cooldown 2 | **Rentetan Pukulan**: lawan pertama 4 pukulan × **15–30%** Attack, lalu lawan kedua (acak) 1 pukulan **45–65%** Attack, salto kembali · cooldown 2 |
+| 🛡️ Tank | 10–20% Attack | **Pasang Badan**: pindah ke depan 1 **teman** (bukan diri sendiri); teman **0 damage**, tank menerima **100%** damage yang tertuju ke temannya (dihitung dengan Defend tank), ditambah serangan yang memang tertuju padanya · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk **15–25%** (acak per anggota) · cooldown 2 |
+| 🥊 Fighter | 15–35% Attack | **Lompat Pelindung**: melompat ke depan 1 teman: teman menerima **5–25%**, fighter **50–70%**. Dipilih untuk diri sendiri ⇒ menghindar, menerima **5–25%**. Bila tank menjaga, tank yang menerima · cooldown 2 | **Rentetan Pukulan**: lawan pertama 4 pukulan × **15–30%** Attack, lalu lawan kedua (acak) 1 pukulan **45–65%** Attack, salto kembali · cooldown 2 |
 | 🗡️ Assassin | 20–50% Attack (**CRITICAL** bila > 40%) | **Tusukan Mematikan**: 90–140% Attack (**CRITICAL** bila > 115%) · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 230–280%** (**CRITICAL** bila > 250%) · cooldown 3 |
-| 🔮 Mage | 10–30% Attack | **Hujan Meteor** (Sky Heaven) / **Badai Es** (Dark Earth): semua lawan, 65–100% Attack, nilai acak tiap lawan · **cooldown 2** | **Kutukan**: 1 lawan, giliran berikutnya 75% gagal walau benar; lawan tidak tahu siapa · cooldown 2 |
-| ✨ Healer | 5–25% Attack | **Penyembuhan**: 1 anggota, **85–115%** stat Heal · tanpa cooldown | **Hujan Cahaya**: semua anggota, **45–70%** stat Heal (acak tiap teman) · cooldown 3 |
+| 🔮 Mage | 10–30% Attack | **Hujan Meteor** (Sky Heaven) / **Badai Es** (Dark Earth): semua lawan, 65–100% Attack, nilai acak tiap lawan · **cooldown 2** | **Kutukan**: 1 lawan, **langsung aktif giliran itu, 100% berhasil**: skill lawan itu gagal walau jawabannya benar, sebelum ia sempat beraksi; ia tidak tahu terkena kutukan (hasilnya sama seperti jawaban salah) · cooldown 2 |
+| ✨ Healer | 5–25% Attack | **Penyembuhan**: 1 anggota, **85–115%** Attack healer · tanpa cooldown | **Hujan Cahaya**: semua anggota, **45–70%** Attack healer (acak tiap teman) · cooldown 3 |
 
 * **CRITICAL**: hanya Assassin. Bila persen damage melebihi ambang (40% / 115% / 250%), tulisan **CRITICAL!** merah muncul sebentar di dekat target.
 * **Penjagaan satu per satu**: tiap serangan lawan dilewatkan sendiri-sendiri ke tank/fighter penjaga. Jadi bila lawan menyerang lebih dari sekali
   (beberapa penyerang, serangan area, atau 4 pukulan Fighter), penjaga menerima setiap damage itu satu per satu. Tank menangkis lebih dulu daripada Fighter.
 * Urutan perlindungan pada satu damage: Benteng Tim → tank menangkis → fighter melompat (bila fighter dijaga tank, tank menerima bagian fighter) → fighter menghindar.
-* Aksi dalam satu giliran dihitung serempak: perisai/lompat/bayangan/kutukan → pemulihan → serangan (urutan acak).
+* Aksi dalam satu giliran dihitung serempak: **kutukan** (langsung menggagalkan skill targetnya) → perisai/lompat/bayangan → pemulihan → serangan.
+* **Siapa menyerang duluan?** Semua serangan dalam satu giliran bersifat **serempak**: tiap karakter yang hidup di awal giliran dan menjawab benar tetap menyerang
+  walau ia dijatuhkan HP-nya oleh serangan lain pada giliran yang sama. Jadi bila dua Assassin sama-sama tinggal 1 hit KO dan keduanya menyerang, **keduanya pingsan**
+  (tidak ada yang "duluan"). Urutan acak hanya memengaruhi kejadian yang saling bergantung, mis. siapa yang menghabiskan HP target lebih dulu (kredit kill) atau
+  serangan yang menimpa target yang sudah pingsan di giliran yang sama (tidak ada damage tambahan). Pemulihan Healer berjalan sebelum serangan, jadi heal bisa menyelamatkan target yang diserang.
+  Satu-satunya cara serangan musuh tidak jalan adalah: jawaban salah, kena Kutukan, atau pelaku sudah pingsan sejak giliran sebelumnya.
 * Cooldown "2" = tidak bisa dipakai 2 giliran berikutnya; skill yang gagal tetap memakai cooldown. Karakter dengan HP 0 **pingsan** dan tidak ikut giliran berikutnya.
 
 ### Stat bawaan (bisa diubah guru per game, dan per sesi di lobi)
 
-| Peran | HP | Attack | Defend | Heal |
-|---|---|---|---|---|
-| Tank | 240 | 24 | 12 | – |
-| Fighter | 190 | 48 | 9 | – |
-| Assassin | 135 | 75 | 5 | – |
-| Mage | 150 | 55 | 6 | – |
-| Healer | 150 | 30 | 8 | 30 |
+| Peran | HP | Attack | Defend |
+|---|---|---|---|
+| Tank | 340 | 24 | 18 |
+| Fighter | 240 | 52 | 12 |
+| Assassin | 135 | 90 | 5 |
+| Mage | 150 | 65 | 6 |
+| Healer | 150 | 50 | 8 |
+
+Kekuatan pemulihan Healer **diambil dari Attack-nya** (tidak ada kolom Heal lagi): Penyembuhan 85–115% × 50 ≈ **43–58 HP**, Hujan Cahaya 22–35 HP untuk tiap teman.
+Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat bawaan** di formulir (atau ubah di Panel wasit) untuk memakai stat baru.
 
 ### Laporan simulasi (`docs/simulasi_keseimbangan.py`)
 
-2500 pertandingan per baris, soal habis di giliran 30, peluang menjawab benar *p*. "Acak" = skill & target acak (batas bawah).
-"Terarah" = menyerang 2 lawan terlemah dan melindungi 2 sekutu terlemah. Kedua sisi selalu menang ±50% (cermin), tidak ada seri.
+1500 pertandingan per baris, soal habis di giliran 30, peluang menjawab benar *p*. "Acak" = skill & target acak (batas bawah).
+"Terarah" = menyerang 2 lawan terlemah dan melindungi 2 sekutu terlemah. Kedua sisi menang ±50% (cermin), tidak ada seri.
 
 **Cara menang (p = 0.7):**
 
-| Mode | Pemain | Menang Sky / Dark | Semua musuh habis | Selisih jumlah hidup | Selisih total HP |
-|---|---|---|---|---|---|
-| 4 vs 4 | acak | 49% / 51% | **74%** | 19% | 7% |
-| 4 vs 4 | terarah | 49% / 51% | **55%** | 36% | 9% |
-| 5 vs 5 | acak | 49% / 51% | **74%** | 21% | 5% |
-| 5 vs 5 | terarah | 51% / 49% | **54%** | 40% | 7% |
+| Mode | Pemain | Menang Sky / Dark | Semua musuh habis | Selisih jumlah hidup | Selisih total HP | Rata-rata giliran |
+|---|---|---|---|---|---|---|
+| 4 vs 4 | acak | 48% / 51% | **79%** | 16% | 4% | 22,3 |
+| 4 vs 4 | terarah | 52% / 48% | **66%** | 26% | 8% | 24,5 |
+| 5 vs 5 | acak | 52% / 48% | **74%** | 22% | 4% | 23,3 |
+| 5 vs 5 | terarah | 51% / 49% | **62%** | 32% | 5% | 25,3 |
 
-Rentang p = 0.5 → 0.9: semua musuh habis 30–85%, selisih jumlah hidup 11–60%, selisih total HP 3–11%.
+**Per peran (p = 0.7, pemain terarah):**
 
-**Per peran (p = 0.7).** *Kill akhir* = serangan yang menjatuhkan HP target ke 0 (kill lewat tangkisan dikreditkan ke penyerang asli).
-*Pingsan pertama* = peran yang paling dulu tumbang di timnya. *Bertahan* = rata-rata giliran hidup (maks 30).
-
-| Mode | Peran | Damage | Kill akhir | Pingsan | Pingsan pertama | Bertahan | Selamat sampai akhir |
+| Mode | Peran | Damage | Kill akhir | Pingsan | Pingsan pertama | Bertahan (maks 30) | Selamat |
 |---|---|---|---|---|---|---|---|
-| 4v4 acak | Tank | <1% | 0% | 51% | 15% | 20,5 | 49% |
-| | Assassin | 56% | **80%** | 53% | 26% | 17,7 | 47% |
-| | Mage | 44% | 20% | **58%** | **30%** | **17,1** | 42% |
-| | Healer | <1% | 0% | 55% | 29% | 18,4 | 45% |
-| 4v4 terarah | Tank | <1% | 0% | 31% | 0% | **25,5** | **69%** |
-| | Assassin | 53% | **85%** | 52% | 41% | 18,4 | 48% |
-| | Mage | 46% | 14% | **58%** | **42%** | 17,8 | 42% |
-| | Healer | 1% | 0% | 45% | 16% | 21,5 | 55% |
-| 5v5 acak | Tank | <1% | 0% | 49% | 11% | 20,7 | 51% |
-| | Fighter | 17% | 13% | 55% | 18% | 19,0 | 45% |
-| | Assassin | 41% | **65%** | 56% | 23% | 17,5 | 44% |
-| | Mage | 41% | 22% | **61%** | **26%** | **16,9** | 39% |
-| | Healer | <1% | 0% | 56% | 23% | 18,4 | 44% |
-| 5v5 terarah | Tank | <1% | 0% | 30% | 0% | 25,9 | 70% |
-| | Fighter | 23% | 15% | 36% | 1% | 24,8 | 64% |
-| | Assassin | 36% | **70%** | 57% | 40% | 17,1 | 43% |
-| | Mage | 40% | 15% | **63%** | **44%** | **16,2** | 37% |
-| | Healer | <1% | 0% | 49% | 15% | 20,6 | 51% |
+| 4v4 | Tank | <1% | 0% | 40% | 6% | 22,9 | 60% |
+| | Assassin | 56% | **83%** | 53% | 40% | 16,8 | 47% |
+| | Mage | 43% | 16% | **59%** | 40% | 16,5 | 41% |
+| | Healer | 1% | 1% | 47% | 14% | 20,3 | 53% |
+| 5v5 | Tank | <1% | 0% | 40% | 4% | 23,5 | 60% |
+| | Fighter | 21% | 14% | 36% | 0% | 24,2 | 64% |
+| | Assassin | 41% | **70%** | 58% | 37% | 16,1 | 42% |
+| | Mage | 37% | 15% | **64%** | 45% | 15,1 | 36% |
+| | Healer | 1% | 0% | 50% | 13% | 19,5 | 50% |
+
+**Uji Tank dikeroyok** (seluruh tim lawan menyerang Tank terus-menerus, tanpa heal, semua jawaban benar): Tank **tidak pernah pingsan dalam 2 giliran**
+(0–1%), pingsan dalam 3 giliran hanya 16% (4v4) / 25% (5v5), rata-rata bertahan 5,3 / 4,9 giliran. Dengan heal dan sebagian jawaban salah, lebih lama lagi.
+
+Analisis healer: pemulihan rata-rata ±16–21 HP per tim per giliran (Penyembuhan ≈ 43–58 HP sekali pakai, tanpa cooldown) — menutup ±15–20% damage
+yang masuk; healer yang aktif memakai Penyembuhan tiap giliran dan menyasar sekutu paling terluka (terutama Tank yang kini menerima semua damage penjagaan) jelas terasa.
+Dengan stat lama (heal 30) Penyembuhan hanya 26–35 HP, setara <10% HP Tank — itulah mengapa terasa kecil. Kesulitan murid juga wajar bila belum paham: sebaiknya Healer
+memakai Penyembuhan (tanpa cooldown) tiap giliran pada anggota dengan HP terendah, dan Hujan Cahaya saat 2+ anggota terluka.
 
 Kesimpulan:
-* **Kill akhir terbanyak**: Assassin (65–85%), karena serangan besarnya sering menjadi pukulan penutup; Mage menyusul (14–22%), Fighter 13–15%.
-* **Pemberi damage terbesar**: Assassin dan Mage (±80–100% bila 4v4); pada 5v5 Fighter menyumbang 17–23%. Tank dan Healer praktis tidak melukai (sesuai rancangan: penopang tim).
-* **Paling cepat pingsan**: **Mage** (pingsan paling sering, 58–63%) dan **Assassin** (peran pertama yang tumbang bila lawan fokus: 40–44%) — keduanya "meriam kaca".
-* **Paling lama bertahan**: **Tank** (hampir 26 dari 30 giliran bila pemain terarah), disusul **Fighter** (24,8) lalu Healer.
-* Pada permainan acak semua peran tumbang dengan frekuensi sebanding (49–61%), jadi tidak ada peran yang tidak adil; peran bertahan baru menonjol bila pemain bermain terarah.
+* **Kill akhir terbanyak**: Assassin (70–83%); **pemberi damage terbesar**: Assassin dan Mage; Fighter 21% pada 5v5; Tank & Healer praktis tidak melukai.
+* **Paling cepat pingsan**: **Mage** (59–64%) dan **Assassin** (peran pertama tumbang bila lawan fokus: 37–45%). **Paling lama bertahan**: Tank, Fighter, Healer.
+* Pada permainan acak semua peran tumbang dengan frekuensi sebanding, jadi tidak ada peran yang tidak adil.
 
 ### Kebutuhan soal
 
@@ -163,9 +165,9 @@ Giliran maksimum mengikuti kategori yang soalnya paling sedikit.
 ## Pengujian yang sudah dilakukan
 
 * Simulasi game penuh via API (8–10 murid virtual) sampai ada pemenang.
-* 39+ pemeriksaan aturan otomatis (cooldown, Benteng 20%, Pasang Badan 0%/10% dan tak bisa diri sendiri, Fighter: lompat pelindung 20%/35%,
+* 39+ pemeriksaan aturan otomatis (cooldown, Benteng 15–25%, Pasang Badan 0%/100% dan tak bisa diri sendiri, Fighter: lompat pelindung 5–25%/50–70%,
   menghindar 20%, rantai tank-fighter, rentetan pukulan 4+1, basic 10–20%, kategori soal & rotasi Fighter, 5 vs 5, soal sama untuk kedua tim,
-  bayangan 275%, kutukan 75%, heal, tumbang semua/seri, soal habis, auto-acak, ganti pemain).
+  bayangan 275%, kutukan langsung 100%, heal, tumbang semua/seri, soal habis, auto-acak, ganti pemain).
 * Tangkapan layar proyektor, panel wasit, formulir, dan HP murid pada setiap tahap (Chromium).
 * Kunci jawaban tidak ada di `index.html` game maupun di respons API murid; aksi guru butuh login + CSRF.
 

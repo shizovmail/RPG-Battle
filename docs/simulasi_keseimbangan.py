@@ -18,20 +18,21 @@ BASE = ['tank', 'assassin', 'mage', 'healer']
 CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s1': 2, 's2': 3},
       'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
 BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
-STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend, heal
-    'tank': dict(hp=240, atk=24, df=12, heal=0),
-    'fighter': dict(hp=190, atk=48, df=9, heal=0),
-    'assassin': dict(hp=135, atk=75, df=5, heal=0),
-    'mage': dict(hp=150, atk=55, df=6, heal=0),
-    'healer': dict(hp=150, atk=30, df=8, heal=30),
+STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan heal Healer = Attack-nya)
+    'tank': dict(hp=340, atk=24, df=18),
+    'fighter': dict(hp=240, atk=52, df=12),
+    'assassin': dict(hp=135, atk=90, df=5),
+    'mage': dict(hp=150, atk=65, df=6),
+    'healer': dict(hp=150, atk=50, df=8),
 }
+F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
 
-def main_satu(S, p, seed, maks, fighter, gaya):
+def main_satu(S, p, seed, maks, fighter, gaya, noheal=False):
     rnd = random.Random(seed)
     U_ = lambda r: rnd.uniform(*r)
     roles = BASE[:1] + (['fighter'] if fighter else []) + BASE[1:]
-    U = [dict(t=t, r=r, hp=S[r]['hp'], mx=S[r]['hp'], atk=S[r]['atk'], df=S[r]['df'], heal=S[r]['heal'],
+    U = [dict(t=t, r=r, hp=S[r]['hp'], mx=S[r]['hp'], atk=S[r]['atk'], df=S[r]['df'], heal=S[r]['atk'], pulih=0,
               cd={'s1': 0, 's2': 0}, siap=0, kut=0, mati=None, dmg=0, kill=0) for t in (0, 1) for r in roles]
     A = lambda t: [x for x in U if x['t'] == t and x['hp'] > 0]
     pertama = {}
@@ -46,6 +47,8 @@ def main_satu(S, p, seed, maks, fighter, gaya):
             if not en: continue
             tg = None
             pilih_en = (lambda: rnd.choice(sorted(en, key=lambda x: x['hp'])[:2])) if gaya == 'terarah' else (lambda: rnd.choice(en))
+            if gaya == 'fokus' and u['t'] == 1:      # uji: seluruh tim 2 mengeroyok Tank tim 1
+                pilih_en = lambda: U[0] if U[0]['hp'] > 0 else rnd.choice(en)
             if u['siap']:
                 sk = 'strike'; tg = pilih_en()
             else:
@@ -65,10 +68,14 @@ def main_satu(S, p, seed, maks, fighter, gaya):
                     tg = pilih_en()
             if sk == 'basic' and tg is None: tg = pilih_en()
             ok = rnd.random() < p
-            if u['kut']:
-                u['kut'] = 0
-                if ok and rnd.random() < .75: ok = False
             acts.append([u, sk, tg, ok])
+        # Kutukan Mage langsung aktif giliran ini (100%): dijatuhkan sebelum skill siapa pun berjalan, acak urutan antar-mage
+        ck = [a for a in acts if a[0]['r'] == 'mage' and a[1] == 's2' and a[3]]
+        rnd.shuffle(ck)
+        for a in ck:
+            if not a[3]: continue
+            for b in acts:
+                if b[0] is a[2]: b[3] = False
         benteng, stealth, curses, tguard, fguard, fself = {}, set(), [], {}, {}, set()
         for u, sk, tg, ok in acts:
             r = u['r']
@@ -82,14 +89,13 @@ def main_satu(S, p, seed, maks, fighter, gaya):
                 if tg is u: fself.add(id(u))
                 else: fguard[id(tg)] = u
             if r == 'assassin' and sk == 's2': stealth.add(id(u)); u['siap'] = 1
-            if r == 'mage' and sk == 's2': curses.append(tg)
         for u, sk, tg, ok in acts:
-            if ok and u['r'] == 'healer':
+            if ok and u['r'] == 'healer' and not noheal:
                 tl = [tg] if sk == 's1' else A(u['t'])
                 for x in tl:
                     if x['hp'] > 0:
                         amt = max(1, round(u['heal'] * (U_((.85, 1.15)) if sk == 's1' else U_((.45, .70)))))
-                        x['hp'] = min(x['mx'], x['hp'] + amt)
+                        e = min(x['mx'], x['hp'] + amt) - x['hp']; x['hp'] += e; u['pulih'] += e
 
         def kena(x, d, src):
             e = min(d, x['hp']); x['hp'] -= e; src['dmg'] += e
@@ -97,45 +103,46 @@ def main_satu(S, p, seed, maks, fighter, gaya):
                 x['mati'] = rounds; src['kill'] += 1
                 pertama.setdefault(x['t'], x)
 
-        def serangan(x, raw, src):
-            """raw = damage tertuju ke x. Urutan: Benteng -> tank menangkis -> fighter melompat -> fighter menghindar."""
-            raw = max(1, round(raw))
-            if id(x) in benteng: raw = max(1, round(raw * benteng[id(x)]))
+        def serangan(x, gross, k, src):
+            """gross = attack x persen; k = bagian defend yang dipotong (1 = normal). Urutan: Benteng -> tank menerima 100% ->
+            fighter melompat (teman 5-25%, fighter 50-70%) -> fighter menghindar. Tiap penerima memakai defend-nya sendiri."""
+            net = lambda y: max(1, round(gross - y['df'] * k))
+            pr = benteng.get(id(x), 1)
+            mul = lambda v: max(1, round(v * pr))
             gt = tguard.get(id(x))
             if gt is not None and gt['hp'] > 0 and gt is not x:
-                kena(gt, max(1, round(raw * U_((.05, .15)))), src); return
+                kena(gt, mul(net(gt)), src); return
             fg = fguard.get(id(x))
             if fg is not None and fg['hp'] > 0 and fg is not x:
-                kena(x, max(1, round(raw * U_((.05, .25)))), src)
-                bagian = max(1, round(raw * U_((.10, .40))))
+                kena(x, max(1, round(mul(net(x)) * U_(F_TEMAN))), src)
+                pc = U_(F_DIRI)
                 gt2 = tguard.get(id(fg))
-                if gt2 is not None and gt2['hp'] > 0: kena(gt2, max(1, round(bagian * U_((.05, .15)))), src)
-                else: kena(fg, bagian, src)
+                if gt2 is not None and gt2['hp'] > 0: kena(gt2, max(1, round(mul(net(gt2)) * pc)), src)
+                else: kena(fg, max(1, round(mul(net(fg)) * pc)), src)
                 return
-            if id(x) in fself: raw = max(1, round(raw * U_((.05, .25))))
-            kena(x, raw, src)
+            d = mul(net(x))
+            if id(x) in fself: d = max(1, round(d * U_(F_HINDAR)))
+            kena(x, d, src)
         rnd.shuffle(acts)
         for u, sk, tg, ok in acts:
             if not ok: continue
             r = u['r']
             if sk == 'basic':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_(BASIC[r]) - tg['df'])), u)
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(BASIC[r]), 1, u)
             elif r == 'assassin' and sk == 's1':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_((.90, 1.40)) - tg['df'])), u)
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_((.90, 1.40)), 1, u)
             elif sk == 'strike':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_((2.30, 2.80)) - tg['df'])), u)
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_((2.30, 2.80)), 1, u)
             elif r == 'mage' and sk == 's1':
                 for x in A(1 - u['t']):
-                    if id(x) not in stealth: serangan(x, max(1, round(u['atk'] * U_((.65, 1.0)) - x['df'])), u)
+                    if id(x) not in stealth: serangan(x, u['atk'] * U_((.65, 1.0)), 1, u)
             elif r == 'fighter' and sk == 's2':
                 if id(tg) not in stealth and tg['hp'] > 0:
                     ms = [U_((.15, .30)) for _ in range(4)]
-                    total = max(4, round(u['atk'] * sum(ms) - tg['df']))
-                    for m in ms: serangan(tg, max(1, round(total * m / sum(ms))), u)    # tiap pukulan lewat penjagaan sendiri-sendiri
+                    for m in ms: serangan(tg, u['atk'] * m, m / sum(ms), u)    # tiap pukulan lewat penjagaan sendiri-sendiri
                 lain = [x for x in A(1 - u['t']) if x is not tg] or [tg]
                 t2 = rnd.choice(lain)
-                if id(t2) not in stealth and t2['hp'] > 0: serangan(t2, max(1, round(u['atk'] * U_((.45, .65)) - t2['df'])), u)
-        for x in curses: x['kut'] = 1
+                if id(t2) not in stealth and t2['hp'] > 0: serangan(t2, u['atk'] * U_((.45, .65)), 1, u)
         for u in U:
             for k in ('s1', 's2'):
                 if u['cd'][k] > 0: u['cd'][k] -= 1
@@ -156,7 +163,7 @@ def main_satu(S, p, seed, maks, fighter, gaya):
         d['hidup'] += 0 if u['mati'] else 1
         d['tahan'] += u['mati'] if u['mati'] else rounds
     for t, x in pertama.items(): per[x['r']]['pertama'] += 1
-    return dict(rounds=rounds, win=win, how=how, per=per, n=len(roles))
+    return dict(rounds=rounds, win=win, how=how, per=per, n=len(roles), tank_mati=U[0]['mati'], pulih=sum(u['pulih'] for u in U))
 
 
 def laporan(S, p, maks, n, fighter, gaya):
@@ -175,7 +182,8 @@ def laporan(S, p, maks, n, fighter, gaya):
     rep = {k: dict(damage=round(100 * a['dmg'] / tdmg), kill=round(100 * a['kill'] / tkill), pingsan=round(100 * a['mati'] / a['n']),
                    pertama=round(100 * a['pertama'] / tpert), tahan=round(a['tahan'] / a['n'], 1), selamat=round(100 * a['hidup'] / a['n']),
                    dmg_rata=round(a['dmg'] / a['n'])) for k, a in agg.items()}
-    return dict(giliran=round(st.mean(r['rounds'] for r in R), 1),
+    return dict(pulih=round(st.mean(r['pulih'] for r in R) / max(1, st.mean(r['rounds'] for r in R))),
+                giliran=round(st.mean(r['rounds'] for r in R), 1),
                 kiri=pct(lambda r: r['win'] == 0), kanan=pct(lambda r: r['win'] == 1),
                 habis=pct(lambda r: r['how'] == 'habis'), hidup=pct(lambda r: r['how'] == 'hidup'),
                 hp=pct(lambda r: r['how'] == 'hp'), seri=pct(lambda r: r['how'] == 'seri'), peran=rep)
@@ -200,4 +208,13 @@ if __name__ == '__main__':
                 print('  p=%.1f giliran %4.1f | menang Sky/Dark %2d%%/%2d%% | via habis %2d%% · selisih hidup %2d%% · selisih HP %2d%% · seri %d%%' %
                       (p, r['giliran'], r['kiri'], r['kanan'], r['habis'], r['hidup'], r['hp'], r['seri']))
             print('   Per peran (p=0.7):')
-            cetak_peran(laporan(STAT, 0.7, maks, n, fighter, gaya)['peran'])
+            lap = laporan(STAT, 0.7, maks, n, fighter, gaya)
+            cetak_peran(lap['peran'])
+            print('     rata-rata HP pulih per giliran (kedua tim): %d' % lap['pulih'])
+    print('== Uji Tank dikeroyok: seluruh tim lawan menyerang Tank terus, tanpa heal, jawaban selalu benar')
+    for fighter in (False, True):
+        R = [main_satu(STAT, 1.0, i, 12, fighter, 'fokus', noheal=True)['tank_mati'] for i in range(n)]
+        mati = [r for r in R if r]
+        print('  %s: Tank pingsan dalam 2 giliran %d%% · dalam 3 giliran %d%% · rata-rata pingsan di giliran %.1f' % (
+              '5 vs 5' if fighter else '4 vs 4', round(100 * sum(1 for r in mati if r <= 2) / n),
+              round(100 * sum(1 for r in mati if r <= 3) / n), st.mean(mati) if mati else 0))
