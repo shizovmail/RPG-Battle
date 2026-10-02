@@ -9,6 +9,7 @@ header('Cache-Control: no-store');
 
 function out($a) { echo json_encode($a, JSON_UNESCAPED_UNICODE); exit; }
 function gagal($pesan, $kode = '') { out(['ok' => false, 'pesan' => $pesan, 'kode' => $kode]); }
+function esc_nama($n) { return '"' . $n . '"'; }
 function masuk_json()
 {
     $in = json_decode((string)file_get_contents('php://input'), true);
@@ -102,7 +103,17 @@ if (in_array($a, ['gstate', 'riwayat', 'aksi'], true)) {
         });
     } elseif ($do === 'cfg') {
         if ($s['status'] !== 'lobi') gagal('Pengaturan hanya bisa diubah saat masih di lobi.');
-        db_q('UPDATE rpg_sesi SET cfg=? WHERE id=?', [json_encode(rpg_cfg_bersih($in['cfg'] ?? [])), $sid]);
+        $baruCfg = rpg_cfg_bersih($in['cfg'] ?? []);
+        $baruCfg['pilih_mandiri'] = rpg_cfg_sesi($s)['pilih_mandiri'];     // diatur lewat tombol sendiri (aksi "mandiri")
+        db_q('UPDATE rpg_sesi SET cfg=? WHERE id=?', [json_encode($baruCfg), $sid]);
+    } elseif ($do === 'mandiri') {
+        if ($s['status'] !== 'lobi') gagal('Mode pilih peran hanya bisa diubah saat masih di lobi.');
+        $on = !empty($in['nilai']);
+        $c = rpg_cfg_sesi($s); $c['pilih_mandiri'] = $on;
+        live_tx(function () use ($sid, $c, $on) {
+            db_q('UPDATE rpg_sesi SET cfg=? WHERE id=?', [json_encode($c), $sid]);
+            if (!$on) db_q("UPDATE rpg_pemain SET tim=0, peran='' WHERE sesi_id=?", [$sid]);   // semua kembali ke lobi; guru yang mengatur
+        });
     } elseif ($do === 'mulai') {
         if ($s['status'] !== 'lobi') gagal('Pertandingan sudah dimulai.');
         list($ok, $alasan) = rpg_bisa_mulai($sid);
@@ -169,7 +180,7 @@ if ($a === 'gabung' && $post) {
     if ($ada) {
         if ($ptoken !== '' && hash_equals($ada['token'], $ptoken)) {
             $tok = $ada['token'];
-        } elseif ($now - (float)$ada['seen'] > 15) {          // pemilik lama sudah putus: boleh masuk kembali
+        } elseif ($now - (float)$ada['seen'] > 8) {           // pemilik lama sudah putus: boleh masuk kembali
             $tok = bin2hex(random_bytes(8));
             db_q('UPDATE rpg_pemain SET token=?, seen=? WHERE id=?', [$tok, $now, $ada['id']]);
         } else {
@@ -192,6 +203,35 @@ if ($a === 'state') {
     $s = rpg_tick($sid);
     if (!$s) gagal('Sesi tidak ditemukan.', 'keluar');
     out(rpg_murid_state($s, $p));
+}
+
+// Murid memilih / melepas peran sendiri di lobi (bila guru mengizinkan)
+if ($a === 'peran' && $post) {
+    $in = masuk_json();
+    $sid = (int)($in['sesi'] ?? 0);
+    $p = db_row('SELECT * FROM rpg_pemain WHERE sesi_id=? AND token=?', [$sid, (string)($in['p'] ?? '')]);
+    if (!$p) gagal('Kamu tidak ada di sesi ini.', 'keluar');
+    $res = live_tx(function () use ($sid, $p, $in) {
+        $s = rpg_get($sid);
+        if (!$s) return ['Sesi tidak ditemukan.', 'keluar'];
+        if ($s['status'] !== 'lobi') return ['Pertandingan sudah dimulai, peran tidak bisa diubah lagi.', 'fase'];
+        $cfg = rpg_cfg_sesi($s);
+        if (empty($cfg['pilih_mandiri'])) return ['Guru yang mengatur peran di pertandingan ini.', 'kunci'];
+        if (($in['do'] ?? '') === 'lepas') {
+            db_q("UPDATE rpg_pemain SET tim=0, peran='' WHERE id=?", [$p['id']]);
+            return null;
+        }
+        $tim = (int)($in['tim'] ?? 0); $peran = (string)($in['peran'] ?? '');
+        if (!in_array($tim, [1, 2], true) || !in_array($peran, rpg_peran_semua(), true) || ($peran === 'fighter' && empty($cfg['pakai_fighter']))) return ['Peran tidak valid.', ''];
+        $i = rpg_unit_idx($tim, $peran);
+        $slot = rpg_slot_map($sid);
+        if (isset($slot[$i]) && (int)$slot[$i]['id'] !== (int)$p['id']) return [esc_nama($slot[$i]['nama']) . ' sudah memegang peran itu. Minta ia keluar dulu, atau pilih peran lain.', 'penuh'];
+        db_q('UPDATE rpg_pemain SET tim=?, peran=? WHERE id=?', [$tim, $peran, $p['id']]);
+        return null;
+    });
+    if ($res) gagal($res[0], $res[1]);
+    $p = db_row('SELECT * FROM rpg_pemain WHERE id=?', [$p['id']]);
+    out(rpg_murid_state(rpg_get($sid), $p));
 }
 
 if ($a === 'pilih' && $post) {
@@ -319,7 +359,7 @@ function rpg_murid_state($s, $p)
     $r = [
         'ok' => true, 'st' => $st, 'ronde' => (int)$s['ronde'], 'nama' => $p['nama'],
         'tim' => $ui >= 0 ? rpg_unit_tim($ui) : 0, 'peran' => $ui >= 0 ? rpg_unit_peran($ui) : '', 'aku' => $ui,
-        'unit' => rpg_unit_tampil($s, $units, $slot, false),
+        'unit' => rpg_unit_tampil($s, $units, $slot, false), 'mandiri' => !empty($cfg['pilih_mandiri']), 'fighter' => !empty($cfg['pakai_fighter']),
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'sisa' => rpg_sisa_ms($s, $cfg), 'total' => rpg_total_ms($s, $cfg), 'sblm' => $s['sblm'],
     ];

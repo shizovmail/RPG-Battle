@@ -90,6 +90,13 @@
   .chip{display:inline-block;background:#eef1f7;color:#1c2436;border-radius:999px;padding:4px 12px;margin:3px;font-size:.9rem;font-weight:700}
   .chip.r{background:#ffe3e3;color:#a12a2a}.chip.g{background:#dff7e8;color:#12704a}
   .selesai-menang .big{animation:lompat .8s ease-in-out infinite}
+  .pk{margin-top:12px;text-align:left}.pk h3{margin:0 0 6px;font-size:.95rem}
+  .pk.t1 h3{color:#b88400}.pk.t2 h3{color:#8d5a2b}
+  .pr{display:flex;align-items:center;gap:10px;background:#f1f3f9;border:2px solid transparent;border-radius:14px;padding:8px 10px;margin-bottom:6px}
+  .pr.aku{border-color:#2c56c9;background:#e6edff}.pr .e{font-size:1.5rem}.pr .in{flex:1;min-width:0}
+  .pr .in b{display:block}.pr .in small{display:block;color:#5b6477;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pr button{border:0;border-radius:10px;padding:9px 14px;font-weight:800;background:#2c56c9;color:#fff;cursor:pointer;flex:none}
+  .pr button[disabled]{background:#c9cfdd;color:#fff;cursor:default}.pr button.out{background:#d64545}
 </style>
 </head>
 <body>
@@ -98,6 +105,7 @@
 <div class="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
 <script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
 <script src="../../../assets/js/game-common.js"></script>
+<script src="../../../assets/js/gk-tahan.js"></script>
 <script>
 (function () {
   var D = GK.data, esc = GK.esc, app = document.getElementById('app');
@@ -114,9 +122,31 @@
     var opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' };
     return fetch(u, opt).then(function (r) { return r.json(); });
   }
-  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); } catch (e) {} }
+  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); localStorage.setItem(KEY + '_n', S.nama); } catch (e) {} }
   function muat() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
   function hapus() { try { localStorage.removeItem(KEY); } catch (e) {} S.p = ''; S.sesi = 0; S.final = false; S.key = ''; }
+  function ingatNama() { try { return localStorage.getItem(KEY + '_n') || ''; } catch (e) { return ''; } }
+  // menyambung kembali ke sesi aktif memakai nama & token lama (tanpa mengetik apa pun)
+  function pulih(n) {
+    var nama = S.nama || ingatNama();
+    if (!nama) { hapus(); S.mode = 'cari'; cari(); return; }
+    S.mode = 'pulih'; tema(0);
+    panel('<div class="big tunggu-anim">🔄</div><h2>Menyambungkan kembali…</h2><p>' + esc(nama) + '</p>');
+    api('gabung', '', { id: D.id, token: D.token, nama: nama, ptoken: S.p }).then(function (j) {
+      if (j.ok) { S.sesi = j.sesi; S.p = j.p; S.nama = j.nama; simpan(); S.final = false; S.key = ''; S.mode = 'main'; poll(); return; }
+      if (j.kode === 'nama' && n < 12) { setTimeout(function () { pulih(n + 1); }, 3000); return; }
+      hapus(); S.mode = 'cari'; cari();
+    }).catch(function () { setTimeout(function () { pulih(n); }, 3000); });
+  }
+  // token tidak dikenal lagi: dikeluarkan guru (sesi sama) atau sesi baru (sambung otomatis)
+  function terputus() {
+    api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+      if (j.sesi && j.sesi.id === S.sesi) {
+        hapus(); S.mode = 'cari'; panel('<div class="big">🚪</div><h2>Kamu dikeluarkan dari lobi</h2><p>Guru mengeluarkanmu dari sesi ini.</p><button class="kunci" id="masuklagi">Masuk lagi</button>');
+        var b = document.getElementById('masuklagi'); if (b) b.onclick = function () { S.mode = 'cari'; masuk(); };
+      } else pulih(0);
+    }).catch(function () { setTimeout(terputus, 2000); });
+  }
   function tema(t) { document.body.className = t === 1 ? 'tim1' : t === 2 ? 'tim2' : ''; }
   function pct(hp, mx) { return Math.max(0, Math.min(100, mx ? hp / mx * 100 : 0)); }
   function hpkls(p) { return p < 25 ? 'k' : p < 55 ? 'm' : ''; }
@@ -183,15 +213,17 @@
     var p;
     if (S.final) {
       p = api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
-        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); S.mode = 'cari'; masuk(); return 'stop'; }
+        GKT.hasil(true);
+        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); pulih(0); return 'stop'; }
       });
     } else {
       p = api('state', 'sesi=' + S.sesi + '&p=' + encodeURIComponent(S.p)).then(function (j) {
-        if (!j.ok) { if (j.kode === 'keluar') { hapus(); S.mode = 'cari'; cari(); return 'stop'; } return; }
+        GKT.hasil(true);
+        if (!j.ok) { if (j.kode === 'keluar') { S.mode = 'pulih'; terputus(); return 'stop'; } return; }
         terapkan(j);
       });
     }
-    p.catch(function () {}).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
+    p.catch(function () { GKT.hasil(false); }).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
   }
 
   function terapkan(j) {
@@ -200,7 +232,7 @@
     var st = j.st === 'jeda' ? 'jeda' : j.st;
     var hpkey = j.unit.map(function (u) { return u.hp; }).join(',');
     var key = [st, j.ronde, j.tim, j.peran, j.sudah ? 1 : 0, j.dikunci ? 1 : 0, j.ikut ? 1 : 0, j.mati ? 1 : 0, j.hasil ? 1 : 0, j.sblm || ''].join('|');
-    if (st === 'lobi') key += '|' + j.unit.map(function (u) { return u.nama; }).join(',');
+    if (st === 'lobi') key += '|' + (j.mandiri ? 1 : 0) + '|' + j.aku + '|' + j.unit.map(function (u) { return u.nama; }).join(',');
     if (st === 'hasil' || st === 'selesai' || st === 'jeda') key += '|' + hpkey;
     if (key === S.key) return;
     S.key = key;
@@ -212,21 +244,48 @@
     if (j.st === 'selesai') return selesai(j);
   }
 
+  var KAT = {
+    tank: 'Pelindung tim. Pasang badan di depan teman (ia 0 damage) atau bentengi seluruh tim.',
+    fighter: 'Petarung lincah tangan kosong. Lompat melindungi teman atau lancarkan rentetan pukulan beruntun.',
+    assassin: 'Penyerang tunggal paling mematikan. Bersembunyi lalu serang dengan damage besar.',
+    mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
+    healer: 'Penyembuh tim. Pulihkan HP temanmu.'
+  };
   function lobi(j) {
+    if (j.mandiri) return pilihPeran(j);
     if (j.aku < 0) {
       panel('<div class="big tunggu-anim">⏳</div><h2>Kamu sudah masuk!</h2><p><b>' + esc(j.nama) + '</b></p>'
-        + '<p>Menunggu guru mengatur peranmu (Tank, Assassin, Mage, atau Healer).</p><p class="muted">Pertandingan ini 4 lawan 4. Jika kamu belum kebagian peran, kamu tetap bisa menonton dan menggantikan teman bila perlu.</p>');
+        + '<p>Menunggu guru mengatur peranmu.</p><p class="muted">Jika kamu belum kebagian peran, kamu tetap bisa menonton dan menggantikan teman bila perlu.</p>');
       return;
     }
-    var kat = {
-      tank: 'Pelindung tim. Pasang badan di depan teman (ia 0 damage) atau bentengi seluruh tim.',
-      fighter: 'Petarung lincah tangan kosong. Lompat melindungi teman atau lancarkan rentetan pukulan beruntun.',
-      assassin: 'Penyerang tunggal paling mematikan. Bersembunyi lalu serang dengan damage 275%.',
-      mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
-      healer: 'Penyembuh tim. Pulihkan HP temanmu.'
-    };
-    tampil('<div class="panel"><div class="big">' + PERAN[j.peran][1] + '</div><h2>' + PERAN[j.peran][0] + ' · ' + TIM[j.tim] + '</h2><p><b>' + esc(j.nama) + '</b></p><p>' + kat[j.peran] + '</p>'
+    tampil('<div class="panel"><div class="big">' + PERAN[j.peran][1] + '</div><h2>' + PERAN[j.peran][0] + ' · ' + TIM[j.tim] + '</h2><p><b>' + esc(j.nama) + '</b></p><p>' + KAT[j.peran] + '</p>'
       + '<p class="muted">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>' + strip(j));
+  }
+  // murid memilih peran sendiri di lobi (bisa keluar lagi agar temannya bisa masuk)
+  function pilihPeran(j) {
+    var h = '<div class="panel"><h2>Pilih peranmu</h2><p class="muted">' + (j.aku >= 0 ? 'Kamu memegang <b>' + PERAN[j.peran][1] + ' ' + PERAN[j.peran][0] + '</b> di ' + TIM[j.tim] + '. Tekan <b>Keluar</b> bila ingin bertukar atau memberi tempat untuk temanmu.'
+      : 'Diskusikan dengan timmu, lalu tekan <b>Pilih</b> pada peran yang kosong. Kalau sudah dipakai temanmu, minta ia <b>Keluar</b> dulu.') + '</p>';
+    [1, 2].forEach(function (t) {
+      h += '<div class="pk t' + t + '"><h3>' + TIM[t] + '</h3>';
+      j.unit.filter(function (u) { return u.tim === t; }).forEach(function (u) {
+        var aku = u.i === j.aku, ada = !!u.nama;
+        h += '<div class="pr' + (aku ? ' aku' : '') + '"><span class="e">' + PERAN[u.peran][1] + '</span><div class="in"><b>' + PERAN[u.peran][0] + '</b><small>' + (ada ? esc(u.nama) + (aku ? ' (kamu)' : '') : 'kosong · ' + KAT[u.peran]) + '</small></div>'
+          + (aku ? '<button class="out" data-lepas="1">Keluar</button>' : ada ? '<button disabled>Terisi</button>' : '<button data-ambil="' + t + '.' + u.peran + '">Pilih</button>') + '</div>';
+      });
+      h += '</div>';
+    });
+    h += '<p class="muted" style="margin-top:10px">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>';
+    tampil(h);
+    function kirim(isi) {
+      isi.sesi = S.sesi; isi.p = S.p;
+      api('peran', '', isi).then(function (r) {
+        S.key = '';
+        if (r.ok) { GK.beep(600, .06); terapkan(r); }
+        else { GK.toast(r.pesan || 'Gagal', '#d64545', 2800); if (r.kode === 'keluar') { S.mode = 'pulih'; terputus(); } }
+      }).catch(function () { GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); });
+    }
+    app.querySelectorAll('[data-ambil]').forEach(function (b) { b.onclick = function () { var a = b.dataset.ambil.split('.'); kirim({ do: 'ambil', tim: +a[0], peran: a[1] }); }; });
+    app.querySelectorAll('[data-lepas]').forEach(function (b) { b.onclick = function () { kirim({ do: 'lepas' }); }; });
   }
 
   // ---------- memilih skill & target ----------
@@ -370,6 +429,10 @@
       if (sv && sv.p) { S.sesi = sv.sesi; S.p = sv.p; S.nama = sv.nama; S.mode = 'main'; poll(); }
       else cari();
     }
+  });
+  GKT.init({
+    aktif: function () { return S.mode === 'main' && !!S.p; },
+    lanjut: function () { if (S.mode === 'main') poll(); }
   });
 })();
 </script>

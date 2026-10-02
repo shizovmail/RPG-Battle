@@ -156,7 +156,7 @@ if ($a === 'gabung' && $post) {
     if ($ada) {
         if ($ptoken !== '' && hash_equals($ada['token'], $ptoken)) {
             $tok = $ada['token'];
-        } elseif ($now - (float)$ada['seen'] > 15) {          // pemilik lama sudah putus: boleh masuk kembali
+        } elseif ($now - (float)$ada["seen"] > 8) {           // pemilik lama sudah putus: boleh masuk kembali
             $tok = bin2hex(random_bytes(8));
             db_q('UPDATE live_pemain SET token=?, seen=? WHERE id=?', [$tok, $now, $ada['id']]);
         } else {

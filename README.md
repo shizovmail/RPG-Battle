@@ -145,6 +145,18 @@ Kesimpulan:
 * **Paling cepat pingsan**: **Mage** (59–64%) dan **Assassin** (peran pertama tumbang bila lawan fokus: 37–45%). **Paling lama bertahan**: Tank, Fighter, Healer.
 * Pada permainan acak semua peran tumbang dengan frekuensi sebanding, jadi tidak ada peran yang tidak adil.
 
+### Pilih peran mandiri & koneksi otomatis
+
+* **Murid memilih peran sendiri (bawaan: aktif).** Setelah masuk lobi, murid melihat 2 tim dengan semua peran; tekan **Pilih** pada peran yang kosong. Bila sudah dipegang
+  temannya, tombol tampil "Terisi" dan nama pemegangnya terlihat — minta ia menekan **Keluar** (kembali ke lobi) agar kamu bisa masuk. Murid boleh pindah peran/tim kapan saja selama lobi.
+* **Guru memegang kendali.** Di Panel wasit (lobi) ada kotak centang **Murid memilih peran sendiri**. Mematikannya mengembalikan semua murid ke lobi (peran dikosongkan), lalu guru
+  memilih peran tiap murid sendiri atau menekan **Acak peran**. Saat aktif pun guru tetap bisa mengatur/menukar peran. Pengaturan awalnya juga ada di formulir game.
+* **Tidak terlempar dari game** (RPG Battle dan Tarik Tambang): tombol Back di HP tidak lagi menutup halaman; ada peringatan sebelum menutup/memuat ulang; saat HP kembali dibuka
+  atau internet kembali, game langsung menyambung; bila terputus muncul pita merah "Menyambungkan kembali…". Bila token hilang (mis. sesi baru dibuat guru), halaman **otomatis
+  masuk lagi dengan namamu** tanpa mengetik; bila dikeluarkan guru muncul tombol *Masuk lagi*. Di Tarik Tambang yang sedang berjalan ada tombol **"Aku sudah ikut, masuk kembali"**
+  (tulis nama yang sama). Nama yang tertinggal online dilepas otomatis setelah ±8 detik.
+  Catatan: halaman murid dibuat saat game disimpan, jadi **simpan ulang** game RPG/Tarik Tambang lama agar mendapat perbaikan ini.
+
 ### Kebutuhan soal
 
 Tiap giliran satu soal per pemain, dan **soal yang muncul sama untuk kedua tim** (4 soal pada 4 vs 4, 5 soal pada 5 vs 5), diacak ke tiap

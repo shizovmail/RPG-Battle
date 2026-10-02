@@ -52,6 +52,7 @@ page_header('Panel wasit', 'guru/game.php');
   .lg{max-height:260px;overflow:auto;font-size:.88rem;line-height:1.5}
   .lg div{border-bottom:1px dotted var(--line);padding:2px 0}
   .lg .rh{font-weight:900;background:#eef1f7;border-radius:8px;padding:2px 8px;margin-top:6px}
+  .mandiri{margin:6px 0 10px;padding:8px 10px;background:#eef3ff;border-radius:10px}
   .gagal{color:#b0524f}.heal{color:#12704a}.dmg{color:#a12a2a;font-weight:700}
   .chip{display:inline-block;padding:2px 9px;border-radius:999px;background:#eef1f7;font-size:.78rem;font-weight:700;margin:1px}
   .chip.k{background:#f3e5ff;color:#5b1b8a}.chip.s{background:#e3f1ff;color:#17508a}
@@ -127,6 +128,7 @@ page_header('Panel wasit', 'guru/game.php');
       document.getElementById('b-baru').onclick = function(){ aksi('sesi_baru'); };
     } else if (j.st === 'lobi') {
       root.innerHTML = '<div class="card"><div class="sec-head"><h2>Lobi <span class="muted" id="jml"></span></h2><div class="actions"><button class="btn" id="b-acak">🎲 Acak peran</button><button class="btn danger small" id="b-batal">Batalkan sesi</button></div></div>'
+        +'<div class="mandiri" id="mandiri"></div>'
         +'<div class="cols"><div class="kol t1"><h3>🟡 Sky Heaven Guardians</h3><div id="k1"></div></div><div class="kol t2"><h3>🟤 Dark Earth Warriors</h3><div id="k2"></div></div></div>'
         +'<h3 style="margin-top:12px">Murid yang masuk <span class="muted small">(✕ untuk mengeluarkan)</span></h3><div class="pmwrap" id="pm"></div>'
         +'<div id="syarat"></div><div class="actions" style="margin-top:8px"><button class="btn primary big" id="b-mulai">▶ Mulai pertandingan</button></div></div>'
@@ -186,7 +188,14 @@ page_header('Panel wasit', 'guru/game.php');
   }
 
   function lobi(j){
-    hashPer('lobi', [j.pemain, j.bisa_mulai, j.alasan, j.cfg.pakai_fighter], function(){
+    hashPer('lobi', [j.pemain, j.bisa_mulai, j.alasan, j.cfg.pakai_fighter, j.cfg.pilih_mandiri], function(){
+      var on = !!j.cfg.pilih_mandiri;
+      document.getElementById('mandiri').innerHTML = '<label class="check"><input type="checkbox" id="t-mandiri"'+(on?' checked':'')+'> <span><b>Murid memilih peran sendiri</b> '+(on?'— aktif: murid berdiskusi lalu mengambil/melepas peran di HP-nya; guru tetap bisa mengatur di bawah.':'— nonaktif: guru yang mengatur peran, murid hanya menunggu.')+'</span></label>';
+      document.getElementById('t-mandiri').onchange = function(){
+        var v = this.checked;
+        if (!v && !confirm('Matikan pilih mandiri? Semua murid dikembalikan ke lobi dan peran yang sudah dipilih dikosongkan. Setelah itu guru mengatur peran atau memakai Acak peran.')) { this.checked = true; return; }
+        aksi('mandiri',{nilai:v});
+      };
       [1,2].forEach(function(t){
         var h = '';
         ORDER.forEach(function(r){

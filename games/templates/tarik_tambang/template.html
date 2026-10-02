@@ -59,6 +59,7 @@
 <div class="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
 <script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
 <script src="../../../assets/js/game-common.js"></script>
+<script src="../../../assets/js/gk-tahan.js"></script>
 <script>
 (function () {
   var D = GK.data, esc = GK.esc, app = document.getElementById('app');
@@ -71,9 +72,31 @@
     var opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' };
     return fetch(u, opt).then(function (r) { return r.json(); });
   }
-  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); } catch (e) {} }
+  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); localStorage.setItem(KEY + '_n', S.nama); } catch (e) {} }
   function muat() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
   function hapus() { try { localStorage.removeItem(KEY); } catch (e) {} S.p = ''; S.sesi = 0; S.final = false; S.key = ''; }
+  function ingatNama() { try { return localStorage.getItem(KEY + '_n') || ''; } catch (e) { return ''; } }
+  // menyambung kembali ke sesi aktif memakai nama & token lama (tanpa mengetik apa pun)
+  function pulih(n) {
+    var nama = S.nama || ingatNama();
+    if (!nama) { hapus(); S.mode = 'cari'; cari(); return; }
+    S.mode = 'pulih'; tema(0);
+    panel('<div class="big tunggu-anim">🔄</div><h2>Menyambungkan kembali…</h2><p>' + esc(nama) + '</p>');
+    api('gabung', '', { id: D.id, token: D.token, nama: nama, ptoken: S.p }).then(function (j) {
+      if (j.ok) { S.sesi = j.sesi; S.p = j.p; S.nama = j.nama; simpan(); S.final = false; S.key = ''; S.mode = 'main'; poll(); return; }
+      if (j.kode === 'nama' && n < 12) { setTimeout(function () { pulih(n + 1); }, 3000); return; }
+      hapus(); S.mode = 'cari'; cari();
+    }).catch(function () { setTimeout(function () { pulih(n); }, 3000); });
+  }
+  // token tidak dikenal lagi: dikeluarkan guru (sesi sama) atau sesi baru (sambung otomatis)
+  function terputus() {
+    api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+      if (j.sesi && j.sesi.id === S.sesi) {
+        hapus(); S.mode = 'cari'; panel('<div class="big">🚪</div><h2>Kamu dikeluarkan dari lobi</h2><p>Guru mengeluarkanmu dari sesi ini.</p><button class="gk-btn" id="masuklagi">Masuk lagi</button>');
+        var b = document.getElementById('masuklagi'); if (b) b.onclick = function () { S.mode = 'cari'; masuk(); };
+      } else pulih(0);
+    }).catch(function () { setTimeout(terputus, 2000); });
+  }
   function tema(t) { document.body.className = t === 2 ? 'tim2' : ''; }
   function badge(t) {
     return t === 1 ? '<span class="badge t1">🔴 TIM MERAH</span>' : t === 2 ? '<span class="badge t2">⚪ TIM PUTIH</span>' : '<span class="badge t0">Belum dapat tim</span>';
@@ -88,7 +111,13 @@
       if (S.mode !== 'cari') return;
       if (!j.ada || !j.aktif) { panel('<div class="big">🔒</div><h2>Game ditutup</h2><p>Guru belum membuka game ini.</p>'); return; }
       if (j.sesi && j.sesi.status === 'lobi') { masuk(); return; }
-      if (j.sesi) panel('<div class="big">🚧</div><h2>Game sedang berjalan</h2><p>Kamu belum bisa masuk. Tunggu sesi berikutnya ya, halaman ini akan mengecek otomatis.</p>');
+      if (j.sesi) {
+        if (S.tampilBerjalan === j.sesi.id) return;
+        S.tampilBerjalan = j.sesi.id;
+        panel('<div class="big">🚧</div><h2>Game sedang berjalan</h2><p>Kalau tadi kamu sudah ikut, tekan tombol di bawah lalu tulis namamu yang sama untuk masuk kembali.</p><button class="gk-btn" id="masuklagi">Aku sudah ikut, masuk kembali</button><p class="muted" style="margin-top:10px">Belum ikut? Tunggu sesi berikutnya, halaman ini mengecek otomatis.</p>');
+        var b = document.getElementById('masuklagi'); if (b) b.onclick = function () { S.tampilBerjalan = 0; S.mode = 'nama0'; masuk(true); };
+        return;
+      }
       else panel('<div class="big tunggu-anim">🪢</div><h2>Menunggu guru…</h2><p>Guru belum membuka lobi. Jangan tutup halaman ini.</p>');
     }).catch(function () {
       if (S.mode === 'cari') panel('<div class="big">📶</div><h2>Tidak ada koneksi</h2><p>Mencoba lagi…</p>');
@@ -116,15 +145,17 @@
     var p;
     if (S.final) {
       p = api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
-        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); S.mode = 'cari'; masuk(); return 'stop'; }
+        GKT.hasil(true);
+        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); pulih(0); return 'stop'; }
       });
     } else {
       p = api('state', 'sesi=' + S.sesi + '&p=' + encodeURIComponent(S.p)).then(function (j) {
-        if (!j.ok) { if (j.kode === 'keluar') { hapus(); S.mode = 'cari'; cari(); return 'stop'; } return; }
+        GKT.hasil(true);
+        if (!j.ok) { if (j.kode === 'keluar') { S.mode = 'pulih'; terputus(); return 'stop'; } return; }
         terapkan(j);
       });
     }
-    p.catch(function () {}).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
+    p.catch(function () { GKT.hasil(false); }).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
   }
 
   function terapkan(j) {
@@ -216,6 +247,10 @@
       if (sv && sv.p) { S.sesi = sv.sesi; S.p = sv.p; S.nama = sv.nama; S.mode = 'main'; poll(); }
       else cari();
     }
+  });
+  GKT.init({
+    aktif: function () { return S.mode === 'main' && !!S.p; },
+    lanjut: function () { if (S.mode === 'main') poll(); }
   });
 })();
 </script>

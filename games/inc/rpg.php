@@ -142,7 +142,7 @@ function rpg_stat_bawaan()
 function rpg_cfg_bawaan()
 {
     return ['waktu_pilih' => 12, 'sumber_waktu' => 'soal', 'waktu_universal' => 15, 'ulang' => 2,
-        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'pakai_fighter' => false, 'soal_per_putaran' => 0, 'stat' => rpg_stat_bawaan()];
+        'lanjut_otomatis' => true, 'acak_opsi' => true, 'peringkat' => false, 'pakai_fighter' => false, 'pilih_mandiri' => true, 'soal_per_putaran' => 0, 'stat' => rpg_stat_bawaan()];
 }
 
 function rpg_cfg_bersih($raw)
@@ -155,7 +155,7 @@ function rpg_cfg_bersih($raw)
     $o['waktu_universal'] = max(5, min(180, (int)($raw['waktu_universal'] ?? $d['waktu_universal'])));
     $o['ulang'] = max(0, min(10, (int)($raw['ulang'] ?? $d['ulang'])));
     $o['soal_per_putaran'] = max(0, min(500, (int)($raw['soal_per_putaran'] ?? $d['soal_per_putaran'])));   // 0 = semua soal
-    foreach (['lanjut_otomatis', 'acak_opsi', 'peringkat', 'pakai_fighter'] as $k) {
+    foreach (['lanjut_otomatis', 'acak_opsi', 'peringkat', 'pakai_fighter', 'pilih_mandiri'] as $k) {
         $o[$k] = array_key_exists($k, $raw) ? !empty($raw[$k]) : $d[$k];
     }
     $o['stat'] = [];
