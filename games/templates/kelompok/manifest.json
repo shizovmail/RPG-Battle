@@ -1,0 +1,16 @@
+{
+  "kode": "kelompok",
+  "nama": "Pembagi Kelompok",
+  "ikon": "👥",
+  "urutan": 4,
+  "deskripsi": "Bagi murid ke dalam kelompok belajar secara acak dan seimbang, lengkap dengan daftar hadir.",
+  "petunjuk": "Isi daftar nama. Saat di kelas, hapus centang murid yang tidak hadir lalu tekan Acak.",
+  "mode": "nama",
+  "skor": false,
+  "min_nama": 2,
+  "pengaturan": [
+    {"nama": "cara", "label": "Cara membagi", "tipe": "select", "default": "jumlah", "opsi": {"jumlah": "Berdasarkan jumlah kelompok", "anggota": "Berdasarkan jumlah anggota per kelompok"}},
+    {"nama": "angka", "label": "Jumlah kelompok / anggota", "tipe": "number", "default": 5, "min": 1, "max": 50},
+    {"nama": "ketua", "label": "Tandai ketua kelompok secara acak", "tipe": "checkbox", "default": true}
+  ]
+}

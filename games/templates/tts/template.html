@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__GAME_TITLE__</title>
+<style>
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#f1ece0;min-height:100vh;color:#1c2436}
+#gk-header{background:#3d3a8f!important}
+.wrap{max-width:1150px;margin:0 auto;padding:14px;display:grid;grid-template-columns:auto minmax(260px,1fr);gap:22px;align-items:start}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}}
+.kiri{display:flex;flex-direction:column;gap:12px;align-items:center;position:sticky;top:8px}
+.aktif-clue{background:#3d3a8f;color:#fff;border-radius:12px;padding:10px 14px;font-weight:700;min-height:1.4em;width:100%;box-sizing:border-box}
+.grid{display:grid;gap:0;background:transparent}
+.sel{position:relative;width:var(--u);height:var(--u)}
+.sel.isi{background:#fff;outline:1.5px solid #2b2a5e;z-index:1}
+.sel input{width:100%;height:100%;border:0;padding:0;margin:0;text-align:center;font-weight:800;font-size:calc(var(--u)*.55);
+  text-transform:uppercase;background:transparent;color:#1c2436;caret-color:transparent;font-family:inherit;outline:none;border-radius:0}
+.sel .no{position:absolute;top:1px;left:2px;font-size:calc(var(--u)*.26);font-weight:800;color:#3d3a8f;pointer-events:none;line-height:1}
+.sel.kata{background:#fff4c7}.sel.fokus{background:#f4b52c}
+.sel.betul{background:#c9f2dc}.sel.keliru input{color:#d64545}
+.sel.bantu input{color:#6b6ba8}
+.aksi{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:800;font-size:1rem;cursor:pointer;background:#fff;color:#1c2436;box-shadow:0 3px 0 rgba(0,0,0,.15)}
+.btn.utama{background:#3d3a8f;color:#fff;box-shadow:0 4px 0 #26245e}
+.petunjuk{background:#fff;border-radius:18px;padding:16px 18px}
+.petunjuk h3{margin:.3em 0 .4em;color:#3d3a8f}
+.petunjuk ol{list-style:none;margin:0 0 12px;padding:0}
+.petunjuk li{padding:6px 8px;border-radius:8px;cursor:pointer;display:flex;gap:8px}
+.petunjuk li b{min-width:22px;color:#3d3a8f}
+.petunjuk li:hover{background:#f4f2fb}.petunjuk li.on{background:#fff4c7}
+.petunjuk li.ok{color:#12704a}.petunjuk li.ok::after{content:" ✓";font-weight:900}
+.info{display:flex;justify-content:space-between;width:100%;font-weight:700}
+</style></head><body>
+<div id="gk-header"></div>
+<div class="wrap">
+  <div class="kiri">
+    <div class="info"><span id="time"></span><span id="status-kata"></span></div>
+    <div class="aktif-clue" id="aktif">Klik sebuah kotak untuk mulai mengisi.</div>
+    <div class="grid" id="grid"></div>
+    <div class="aksi">
+      <button class="btn utama" id="selesai">Kirim jawaban</button>
+    </div>
+  </div>
+  <div class="petunjuk">
+    <h3>Mendatar</h3><ol id="mendatar"></ol>
+    <h3>Menurun</h3><ol id="menurun"></ol>
+  </div>
+</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, P = D.pengaturan || {};
+  var kata = [], sel = {}, W = 0, H = 0, arah = 0, kataAktif = null, nama = '', t0 = 0, tmr = null, beres = false;
+  function $(id) { return document.getElementById(id); }
+  function norm(s) { return String(s).toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+  // ---------- Penyusun teka-teki ----------
+  function susun(daftar) {
+    var grid = {}, arahSel = {}, hasil = [];
+    function k(x, y) { return x + ',' + y; }
+    function get(x, y) { return grid[k(x, y)]; }
+    function cek(w, x, y, d) {
+      var dx = d ? 0 : 1, dy = d ? 1 : 0, silang = 0;
+      if (get(x - dx, y - dy) !== undefined || get(x + dx * w.length, y + dy * w.length) !== undefined) return -1;
+      for (var i = 0; i < w.length; i++) {
+        var cx = x + dx * i, cy = y + dy * i, c = get(cx, cy);
+        if (c !== undefined) {
+          if (c !== w[i] || (arahSel[k(cx, cy)] || {})[d]) return -1;
+          silang++;
+        } else if (get(cx + dy, cy + dx) !== undefined || get(cx - dy, cy - dx) !== undefined) return -1;
+      }
+      return silang;
+    }
+    function taruh(it, x, y, d) {
+      var w = it.jwb;
+      for (var i = 0; i < w.length; i++) {
+        var cx = x + (d ? 0 : i), cy = y + (d ? i : 0);
+        grid[k(cx, cy)] = w[i];
+        (arahSel[k(cx, cy)] = arahSel[k(cx, cy)] || {})[d] = 1;
+      }
+      hasil.push({ it: it, x: x, y: y, d: d });
+    }
+    function calon(it) {
+      var w = it.jwb, terbaik = [], skorMax = 0;
+      hasil.forEach(function (p) {
+        var pw = p.it.jwb;
+        for (var i = 0; i < pw.length; i++) for (var j = 0; j < w.length; j++) {
+          if (pw[i] !== w[j]) continue;
+          var d = 1 - p.d, px = p.x + (p.d ? 0 : i), py = p.y + (p.d ? i : 0);
+          var x = px - (d ? 0 : j), y = py - (d ? j : 0), s = cek(w, x, y, d);
+          if (s > skorMax) { skorMax = s; terbaik = [[x, y, d]]; } else if (s > 0 && s === skorMax) terbaik.push([x, y, d]);
+        }
+      });
+      return terbaik.length ? terbaik[Math.floor(Math.random() * terbaik.length)] : null;
+    }
+    var tertunda = [], tersambung = 0;
+    daftar.forEach(function (it, n) {
+      if (!n) { taruh(it, 0, 0, 0); tersambung++; return; }
+      var c = calon(it);
+      if (c) { taruh(it, c[0], c[1], c[2]); tersambung++; } else tertunda.push(it);
+    });
+    var sisa = [];
+    tertunda.forEach(function (it) { var c = calon(it); if (c) { taruh(it, c[0], c[1], c[2]); tersambung++; } else sisa.push(it); });
+    // kata yang tidak bisa bersilangan: letakkan terpisah
+    sisa.forEach(function (it) {
+      var b = batas(hasil), ok = false;
+      for (var y = b.y0; y <= b.y1 + 2 && !ok; y++) for (var x = b.x0; x <= b.x1 && !ok; x++) {
+        [0, 1].forEach(function (d) { if (!ok && cek(it.jwb, x, y, d) === 0) { taruh(it, x, y, d); ok = true; } });
+      }
+      if (!ok) taruh(it, b.x0, b.y1 + 2, 0);
+    });
+    return { kata: hasil, tersambung: tersambung };
+  }
+  function batas(h) {
+    var b = { x0: 1e9, y0: 1e9, x1: -1e9, y1: -1e9 };
+    h.forEach(function (p) {
+      var x1 = p.x + (p.d ? 0 : p.it.jwb.length - 1), y1 = p.y + (p.d ? p.it.jwb.length - 1 : 0);
+      b.x0 = Math.min(b.x0, p.x); b.y0 = Math.min(b.y0, p.y); b.x1 = Math.max(b.x1, x1); b.y1 = Math.max(b.y1, y1);
+    });
+    return b;
+  }
+  function terbaik(items) {
+    var best = null, bestNilai = -1e9;
+    for (var coba = 0; coba < 60; coba++) {
+      var urut = GK.shuffle(items).sort(function (a, b) { return (b.jwb.length - a.jwb.length) + (Math.random() - .5) * 3; });
+      var r = susun(urut), b = batas(r.kata), w = b.x1 - b.x0 + 1, h = b.y1 - b.y0 + 1;
+      var nilai = r.tersambung * 1000 - w * h - Math.abs(w - h) * 4 - Math.max(0, w - 17) * 60;
+      if (nilai > bestNilai) { bestNilai = nilai; best = r; best.b = b; }
+    }
+    return best;
+  }
+
+  // ---------- Membangun tampilan ----------
+  function bangun() {
+    beres = false;
+    var items = D.soal.map(function (s) { return { petunjuk: s.q, jwb: norm(s.o[0]) }; })
+      .filter(function (it) { return it.jwb.length >= 2 && it.jwb.length <= 20; }).slice(0, 25);
+    var r = terbaik(items), b = r.b;
+    W = b.x1 - b.x0 + 1; H = b.y1 - b.y0 + 1;
+    kata = r.kata.map(function (p) { return { petunjuk: p.it.petunjuk, jwb: p.it.jwb, x: p.x - b.x0, y: p.y - b.y0, d: p.d, sel: [] }; });
+    // penomoran: terpisah untuk mendatar dan menurun, mengikuti urutan tampil
+    // di papan (atas ke bawah, kiri ke kanan) — bukan urutan saat soal dibuat.
+    [0, 1].forEach(function (d) {
+      kata.filter(function (w) { return w.d === d; })
+        .sort(function (a, c) { return a.y - c.y || a.x - c.x; })
+        .forEach(function (w, i) { w.no = i + 1; });
+    });
+
+    var lebar = Math.min(document.querySelector('.wrap').clientWidth - 28, window.innerWidth > 860 ? 640 : 9999);
+    var u = Math.max(22, Math.min(46, Math.floor(lebar / W)));
+    var g = $('grid');
+    g.style.setProperty('--u', u + 'px');
+    g.style.gridTemplateColumns = 'repeat(' + W + ', ' + u + 'px)';
+    g.innerHTML = ''; sel = {};
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var d = document.createElement('div'); d.className = 'sel'; d.dataset.x = x; d.dataset.y = y;
+      g.appendChild(d); sel[x + ',' + y] = { el: d, kata: [] };
+    }
+    kata.forEach(function (w, wi) {
+      for (var i = 0; i < w.jwb.length; i++) {
+        var x = w.x + (w.d ? 0 : i), y = w.y + (w.d ? i : 0), c = sel[x + ',' + y];
+        c.huruf = w.jwb[i]; c.kata[w.d] = w; w.sel.push(c);
+        if (!c.input) {
+          c.el.classList.add('isi');
+          var inp = document.createElement('input');
+          inp.maxLength = 2; inp.autocomplete = 'off'; inp.setAttribute('autocapitalize', 'characters'); inp.spellcheck = false;
+          inp.setAttribute('aria-label', 'kotak ' + (x + 1) + ',' + (y + 1));
+          c.el.appendChild(inp); c.input = inp; pasangEvent(c);
+        }
+        if (i === 0) (c.nos = c.nos || []).push(w.no);
+        if (i === 0 && P.huruf_awal) { c.input.value = w.jwb[0]; c.input.readOnly = true; c.el.classList.add('bantu'); }
+      }
+    });
+    // label nomor kotak: satu kotak bisa menjadi awal soal mendatar SEKALIGUS
+    // menurun, dengan nomor yang berbeda (masing-masing punya urutannya sendiri)
+    Object.keys(sel).forEach(function (key) {
+      var c = sel[key];
+      if (!c.nos) return;
+      var n = document.createElement('span'); n.className = 'no';
+      n.textContent = c.nos.slice().sort(function (a, b) { return a - b; }).join('·');
+      c.el.appendChild(n);
+    });
+    // daftar petunjuk
+    [['mendatar', 0], ['menurun', 1]].forEach(function (p) {
+      var ol = $(p[0]); ol.innerHTML = '';
+      kata.filter(function (w) { return w.d === p[1]; }).sort(function (a, c) { return a.no - c.no; }).forEach(function (w) {
+        var li = document.createElement('li');
+        li.innerHTML = '<b></b><span></span>';
+        li.querySelector('b').textContent = w.no + '.';
+        li.querySelector('span').textContent = w.petunjuk + (P.jumlah_huruf ? ' (' + w.jwb.length + ')' : '');
+        li.onclick = function () { arah = w.d; fokusKe(w.sel[0], w); };
+        w.li = li; ol.appendChild(li);
+      });
+      ol.previousElementSibling.style.display = ol.children.length ? '' : 'none';
+    });
+    $('status-kata').textContent = kata.length + ' kata';
+  }
+
+  function sorot(w) {
+    kata.forEach(function (k) { k.sel.forEach(function (c) { c.el.classList.remove('kata'); }); if (k.li) k.li.classList.remove('on'); });
+    kataAktif = w;
+    if (!w) return;
+    w.sel.forEach(function (c) { c.el.classList.add('kata'); });
+    w.li.classList.add('on');
+    $('aktif').textContent = w.no + (w.d ? ' Menurun: ' : ' Mendatar: ') + w.petunjuk + (P.jumlah_huruf ? ' (' + w.jwb.length + ')' : '');
+  }
+  function fokusKe(c, w) {
+    if (!c || !c.input) return;
+    if (w) sorot(w);
+    c.input.focus();
+  }
+  function geser(c, langkah) {
+    var w = kataAktif; if (!w) return;
+    var i = w.sel.indexOf(c) + langkah;
+    while (i >= 0 && i < w.sel.length && w.sel[i].input.readOnly) i += langkah;
+    if (i >= 0 && i < w.sel.length) w.sel[i].input.focus();
+  }
+  function pasangEvent(c) {
+    var inp = c.input;
+    inp.addEventListener('focus', function () {
+      Object.keys(sel).forEach(function (k) { sel[k].el.classList.remove('fokus'); });
+      c.el.classList.add('fokus');
+      var w = c.kata[arah] || c.kata[1 - arah];
+      if (w) { arah = w.d; if (w !== kataAktif) sorot(w); }
+    });
+    inp.addEventListener('mousedown', function () {
+      if (document.activeElement === inp && c.kata[0] && c.kata[1]) { arah = 1 - arah; sorot(c.kata[arah]); }
+    });
+    inp.addEventListener('input', function () {
+      var v = norm(inp.value); inp.value = v.slice(-1);
+      if (inp.value) geser(c, 1);
+    });
+    inp.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !inp.value) { e.preventDefault(); geser(c, -1); var w = kataAktif; if (w) { var p = w.sel[w.sel.indexOf(c) - 1]; if (p && !p.input.readOnly) p.input.value = ''; } }
+      var m = { ArrowRight: [1, 0], ArrowLeft: [-1, 0], ArrowDown: [0, 1], ArrowUp: [0, -1] }[e.key];
+      if (m) {
+        e.preventDefault();
+        var x = +c.el.dataset.x, y = +c.el.dataset.y, arahBaru = m[0] ? 0 : 1;
+        if (arahBaru !== arah && c.kata[arahBaru]) { arah = arahBaru; sorot(c.kata[arah]); return; }
+        do { x += m[0]; y += m[1]; } while (sel[x + ',' + y] && !sel[x + ',' + y].input);
+        var t = sel[x + ',' + y]; if (t) { if (t.kata[arahBaru]) arah = arahBaru; t.input.focus(); }
+      }
+      if (e.key === 'Enter') { e.preventDefault(); var i = kata.indexOf(kataAktif); var n = kata.slice().sort(function (a, b) { return a.d - b.d || a.no - b.no; }); var s = n[(n.indexOf(kataAktif) + 1) % n.length]; arah = s.d; fokusKe(s.sel[0], s); }
+    });
+  }
+
+  function hitung() {
+    var benar = 0;
+    kata.forEach(function (w) {
+      if (w.sel.every(function (c) { return c.input.value === c.huruf; })) benar++;
+    });
+    return benar;
+  }
+  function selesai() {
+    if (beres) return;
+    beres = true; clearInterval(tmr);
+    var b = hitung();
+    GK.result({ nama: nama, skor: b, maks: kata.length, durasi: Math.round((Date.now() - t0) / 1000), onReplay: function () { mulai(nama); } });
+  }
+  $('selesai').onclick = function () { selesai(); };
+
+  function mulai(n) {
+    nama = n; t0 = Date.now(); bangun(); sorot(null);
+    $('aktif').textContent = 'Klik sebuah kotak atau petunjuk untuk mulai mengisi.';
+    clearInterval(tmr);
+    var batasDetik = (+P.waktu_total || 0) * 60;
+    tmr = setInterval(function () {
+      var lalu = (Date.now() - t0) / 1000;
+      if (batasDetik) {
+        $('time').textContent = '⏱ ' + GK.fmt(batasDetik - lalu);
+        if (lalu >= batasDetik) { GK.toast('Waktu habis ⏰', '#d64545', 1500); selesai(); }
+      } else $('time').textContent = '⏱ ' + GK.fmt(lalu);
+    }, 500);
+  }
+  GK.start({ needName: true, onStart: mulai });
+})();
+</script>
+</body></html>

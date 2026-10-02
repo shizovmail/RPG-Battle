@@ -484,7 +484,8 @@ $link = game_link($u['username'], $g['slug']);
     var sisi = (jarak || 80) / POS[i].s;
     return {dx: dx - sisi, dy: dy};
   }
-  function hantam(e, t, warna){
+  function hantam(e, t, warna, dx){
+    dx = dx || 0;
     var el = $('u'+t.u);
     if (t.bl) { teks(kepalaXY(t.u).x, kepalaXY(t.u).y - 10, 'MELESET!', '#cfd8e8', 30); return; }
     if (t.sdh) { teks(kepalaXY(t.u).x, kepalaXY(t.u).y, '…', '#ccc', 30); return; }
@@ -493,7 +494,8 @@ $link = game_link($u['username'], $g['slug']);
       teks(POS[t.u].x, kepalaXY(t.u).y - 10, 'DITANGKIS!', '#9fe3ff', 30);
       ledakan(gp.x + arah(tk.u) * 20, gp.y - 70 * POS[tk.u].s, ['#fff','#ffd54f','#9fe3ff'], 14, 65);
       tabrak(tk.u);
-      teks(gp.x, gp.y - 130 * POS[tk.u].s - 6, '−' + (tk.r != null ? tk.r : tk.d), '#ff5252', 38);
+      teks(gp.x + dx, gp.y - 130 * POS[tk.u].s - 6, '−' + (tk.r != null ? tk.r : tk.d), '#ff5252', 38);
+      if (t.cr) teks(gp.x, gp.y - 130 * POS[tk.u].s - 52, 'CRITICAL!', '#ff1744', 46, 1500);
       setHP(tk.u, tk.hp); sfx.perisai();
       return;
     }
@@ -519,7 +521,8 @@ $link = game_link($u['username'], $g['slug']);
     var k = kepalaXY(t.u), m = tengahXY(t.u);
     ledakan(m.x, m.y, warna || ['#fff','#ffd54f','#ff8a65'], 12, 70);
     var dm = t.r != null ? t.r : t.d;
-    teks(k.x, k.y - 6, (t.pr ? '🛡️ ' : '') + '−' + dm, t.pr ? '#9fe3ff' : '#ff5252', Math.min(64, 34 + dm * .25));
+    if (t.cr) { teks(k.x, k.y - 52, 'CRITICAL!', '#ff1744', 50, 1500); kilat('#ff8a80', 220); }
+    teks(k.x + dx, k.y - 6, (t.pr ? '🛡️ ' : '') + '−' + dm, t.pr ? '#9fe3ff' : '#ff5252', Math.min(64, 34 + dm * .25));
     if (t.mh) teks(k.x, k.y - 44, 'MENGHINDAR!', '#b9f6ca', 26);
     setHP(t.u, t.hp);
     sfx.hantam();
@@ -672,7 +675,7 @@ $link = game_link($u['username'], $g['slug']);
   };
   // Fighter skill 2: lompat ke lawan pertama, 4 pukulan beruntun, lompat ke lawan kedua, 1 pukulan, salto kembali
   function kombo(e){
-    var u = e.u, T = e.t, A = T[0], B = T[1] || T[0], pa = tgtXY(A), pb = tgtXY(B);
+    var u = e.u, T = e.t, A = T[0], B = T[T.length - 1], pa = tgtXY(A), pb = tgtXY(B);
     cap('🥊 ' + lab(u) + ' memakai Rentetan Pukulan ke ' + nm(A.u) + (B.u !== A.u ? ' lalu ' + nm(B.u) : '') + '!');
     var d1 = keTarget(u, pa.x, pa.y, 60), d2 = keTarget(u, pb.x, pb.y, 60), D = 3600;
     var tr = function(d){ return 'translate(' + d.dx + 'px,' + d.dy + 'px) rotate(0deg)'; };
@@ -689,10 +692,10 @@ $link = game_link($u['username'], $g['slug']);
     var tuA = A.gd && A.tk ? A.tk.u : (A.fgd ? A.fgd.u : A.u);
     [.20,.27,.34,.41].forEach(function(f, n){
       setTimeout(function(){
-        if (A.bl) { if (n === 0) hantam(e, A, null); return; }
+        var H = T[n] || A;   // tiap pukulan membawa damage sendiri (dan dilewatkan sendiri-sendiri ke tank/fighter penjaga)
+        if (H.bl) { if (n === 0) hantam(e, H, null); return; }
         sfx.tebas();
-        if (n < 3) { tabrak(tuA); ledakan(pa.x, pa.y - 70*POS[A.u].s, ['#fff','#ffb74d','#ff9800'], 6, 40, 5); }
-        else hantam(e, A, ['#ffe0b2','#fff','#ff9800']);
+        hantam(e, H, ['#ffe0b2','#fff','#ff9800'], (n - 1.5) * 30);
       }, f * D);
     });
     setTimeout(function(){ sfx.hantam(); kilat('#ffe0b2', 250); hantam(e, B, ['#fff','#ff7043','#ffd54f']); }, .66 * D);

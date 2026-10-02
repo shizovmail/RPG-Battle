@@ -1,0 +1,15 @@
+{
+  "kode": "spin",
+  "nama": "Roda Nama Acak",
+  "ikon": "🎡",
+  "urutan": 3,
+  "deskripsi": "Putar roda untuk memilih murid secara acak. Cocok untuk giliran menjawab atau presentasi.",
+  "petunjuk": "Isi daftar nama (bisa diambil dari kelas tersimpan). Tampilkan di proyektor lalu putar rodanya.",
+  "mode": "nama",
+  "skor": false,
+  "min_nama": 2,
+  "pengaturan": [
+    {"nama": "hapus_terpilih", "label": "Keluarkan nama yang sudah terpilih dari roda", "tipe": "checkbox", "default": true},
+    {"nama": "durasi", "label": "Lama putaran (detik)", "tipe": "number", "default": 5, "min": 2, "max": 15}
+  ]
+}

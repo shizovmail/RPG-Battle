@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__GAME_TITLE__</title>
+<style>
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#2c56c9;background-image:radial-gradient(circle at 20% 0,#4a73e0,transparent 60%);min-height:100vh;color:#1c2436}
+.wrap{max-width:780px;margin:0 auto;padding:16px}
+.bar{display:flex;justify-content:space-between;color:#fff;font-weight:800;margin:6px 0 10px;font-size:1.05rem}
+.prog{height:10px;background:rgba(255,255,255,.25);border-radius:9px;overflow:hidden}
+.prog>div{height:100%;background:#f4b52c;width:0;transition:width .35s}
+.q{background:#fff;border-radius:20px;padding:26px 22px;margin-top:16px;box-shadow:0 8px 0 rgba(0,0,0,.15);font-size:1.4rem;font-weight:700;text-align:center;min-height:100px;display:flex;align-items:center;justify-content:center;white-space:pre-wrap}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+@media(max-width:560px){.opts{grid-template-columns:1fr}.q{font-size:1.2rem}}
+.opt{border:0;border-radius:16px;padding:18px 16px;font-size:1.12rem;font-weight:700;color:#fff;cursor:pointer;text-align:left;display:flex;gap:12px;align-items:center;box-shadow:0 5px 0 rgba(0,0,0,.25);transition:transform .1s,opacity .2s}
+.opt:hover:not(:disabled){transform:translateY(-2px)}
+.opt b{background:rgba(255,255,255,.25);border-radius:8px;padding:3px 11px;flex:none}
+.c0{background:#d64545}.c1{background:#1f6fd1}.c2{background:#e0a01a}.c3{background:#1f9d6b}
+.opt.benar{outline:6px solid #b7f5d4;transform:scale(1.03)}.opt.salah{opacity:.35}.opt:disabled{cursor:default}
+.timer{display:inline-block;min-width:60px;text-align:center}
+.timer.kritis{color:#ffd0d0}
+</style></head><body>
+<div id="gk-header"></div>
+<div class="wrap">
+  <div class="bar"><span id="no"></span><span class="timer" id="time"></span><span id="sk"></span></div>
+  <div class="prog"><div id="pg"></div></div>
+  <div class="q" id="q">Bersiap…</div>
+  <div class="opts" id="opts"></div>
+</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, P = D.pengaturan || {}, soal = [], idx = 0, skor = 0, nama = '', t0 = 0, tmr = null, sisa = 0;
+  function $(id) { return document.getElementById(id); }
+  function mulai(n) { nama = n; soal = P.acak_soal ? GK.shuffle(D.soal) : D.soal.slice(); idx = 0; skor = 0; t0 = Date.now(); tampil(); }
+  function tampil() {
+    if (idx >= soal.length) return selesai();
+    var s = soal[idx];
+    $('no').textContent = 'Soal ' + (idx + 1) + '/' + soal.length;
+    $('sk').textContent = '⭐ ' + skor;
+    $('pg').style.width = (idx / soal.length * 100) + '%';
+    $('q').textContent = s.q;
+    var urut = s.o.map(function (t, i) { return i; });
+    if (P.acak_opsi) urut = GK.shuffle(urut);
+    $('opts').innerHTML = '';
+    urut.forEach(function (oi, k) {
+      var b = document.createElement('button');
+      b.className = 'opt c' + k; b.dataset.oi = oi;
+      b.innerHTML = '<b>' + String.fromCharCode(65 + k) + '</b><span></span>';
+      b.querySelector('span').textContent = s.o[oi];
+      b.onclick = function () { jawab(oi); };
+      $('opts').appendChild(b);
+    });
+    clearInterval(tmr);
+    sisa = +P.waktu_soal || 0;
+    $('time').textContent = sisa ? '⏱ ' + sisa : '';
+    $('time').classList.remove('kritis');
+    if (sisa > 0) tmr = setInterval(function () {
+      sisa--; $('time').textContent = '⏱ ' + sisa;
+      if (sisa <= 5) { $('time').classList.add('kritis'); GK.beep(520, .05); }
+      if (sisa <= 0) { clearInterval(tmr); jawab(-1); }
+    }, 1000);
+  }
+  function jawab(oi) {
+    clearInterval(tmr);
+    var s = soal[idx], ok = oi === s.b;
+    if (ok) { skor++; GK.sfxBenar(); GK.toast('Benar! 🎉', '#1f9d6b'); }
+    else { GK.sfxSalah(); GK.toast(oi < 0 ? 'Waktu habis ⏰' : 'Kurang tepat', '#d64545'); }
+    Array.prototype.forEach.call($('opts').children, function (b) {
+      b.disabled = true;
+      b.classList.add(+b.dataset.oi === s.b ? 'benar' : 'salah');
+    });
+    $('sk').textContent = '⭐ ' + skor;
+    setTimeout(function () { idx++; tampil(); }, 1500);
+  }
+  function selesai() {
+    $('pg').style.width = '100%'; $('time').textContent = '';
+    GK.result({ nama: nama, skor: skor, maks: soal.length, durasi: Math.round((Date.now() - t0) / 1000), onReplay: function () { mulai(nama); } });
+  }
+  GK.start({ needName: true, onStart: mulai });
+})();
+</script>
+</body></html>

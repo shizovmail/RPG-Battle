@@ -1,0 +1,27 @@
+{
+  "kode": "pasangan",
+  "nama": "Mencocokkan Pasangan",
+  "ikon": "🔗",
+  "urutan": 6,
+  "deskripsi": "Kartu kiri dan kanan diacak. Murid memasangkan soal dengan jawabannya.",
+  "petunjuk": "Isi pasangan: sisi kiri berupa soal, istilah, atau gambaran; sisi kanan berupa jawabannya. Cocok untuk perkalian, istilah–arti, tokoh–peristiwa.",
+  "tag": "Pakai pasangan soal–jawaban",
+  "mode": "soal",
+  "grup": "pasangan",
+  "skor": true,
+  "judul_daftar": "Pasangan",
+  "label_soal": "Sisi kiri",
+  "label_opsi": "Pasangannya",
+  "contoh_soal": "contoh: 7 × 8",
+  "contoh_opsi": "contoh: 56",
+  "contoh_impor": "7 × 8 = 56\nSegitiga | 3 sisi\nPersegi | 4 sisi",
+  "jumlah_opsi": 1,
+  "min_opsi": 1,
+  "min_soal": 2,
+  "max_soal": 60,
+  "pengaturan": [
+    {"nama": "per_ronde", "label": "Jumlah pasangan per ronde", "tipe": "number", "default": 6, "min": 2, "max": 10},
+    {"nama": "waktu_total", "label": "Batas waktu seluruh permainan (detik, 0 = tanpa batas)", "tipe": "number", "default": 0, "min": 0, "max": 1800},
+    {"nama": "acak_soal", "label": "Acak urutan pasangan", "tipe": "checkbox", "default": true}
+  ]
+}

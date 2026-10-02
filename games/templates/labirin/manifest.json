@@ -1,0 +1,19 @@
+{
+  "kode": "labirin",
+  "nama": "Labirin Jawaban",
+  "ikon": "🧭",
+  "urutan": 2,
+  "deskripsi": "Murid menjelajah labirin dan berjalan menuju pojok yang berisi jawaban benar.",
+  "petunjuk": "Setiap soal memiliki 2–4 pilihan. Pilihan jawaban akan diletakkan di pojok-pojok labirin.",
+  "mode": "soal",
+  "skor": true,
+  "min_soal": 1,
+  "max_soal": 40,
+  "jumlah_opsi": 4,
+  "min_opsi": 2,
+  "pengaturan": [
+    {"nama": "ukuran", "label": "Ukuran labirin", "tipe": "select", "default": "9", "opsi": {"7": "Kecil (mudah)", "9": "Sedang", "11": "Besar (sulit)"}},
+    {"nama": "acak_soal", "label": "Acak urutan soal", "tipe": "checkbox", "default": true},
+    {"nama": "waktu_soal", "label": "Waktu per soal (detik, 0 = tanpa batas)", "tipe": "number", "default": 0, "min": 0, "max": 600}
+  ]
+}

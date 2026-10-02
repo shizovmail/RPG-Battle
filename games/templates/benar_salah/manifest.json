@@ -1,0 +1,25 @@
+{
+  "kode": "benar_salah",
+  "nama": "Benar atau Salah",
+  "ikon": "✅",
+  "urutan": 5,
+  "deskripsi": "Pernyataan muncul satu per satu. Murid menekan tombol Benar atau Salah secepat mungkin.",
+  "petunjuk": "Tulis pernyataan singkat, lalu pilih apakah pernyataan itu benar atau salah.",
+  "tag": "Pakai daftar pernyataan",
+  "mode": "soal",
+  "grup": "benar_salah",
+  "skor": true,
+  "judul_daftar": "Pernyataan",
+  "label_soal": "Pernyataan",
+  "contoh_soal": "contoh: Semua bilangan prima adalah bilangan ganjil",
+  "opsi_tetap": ["Benar", "Salah"],
+  "jumlah_opsi": 2,
+  "min_opsi": 2,
+  "min_soal": 2,
+  "max_soal": 60,
+  "pengaturan": [
+    {"nama": "waktu_soal", "label": "Waktu per pernyataan (detik, 0 = tanpa batas)", "tipe": "number", "default": 10, "min": 0, "max": 120},
+    {"nama": "acak_soal", "label": "Acak urutan pernyataan", "tipe": "checkbox", "default": true},
+    {"nama": "tampil_jawaban", "label": "Tampilkan jawaban yang benar saat murid salah", "tipe": "checkbox", "default": true}
+  ]
+}

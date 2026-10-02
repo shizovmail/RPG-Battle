@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__GAME_TITLE__</title>
+<style>
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#0f6b5a;min-height:100vh;color:#1c2436}
+.wrap{max-width:1150px;margin:0 auto;padding:14px}
+.ctrl{background:#fff;border-radius:18px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.ctrl select,.ctrl input{font-size:1rem;padding:9px 10px;border:1.5px solid #d0d7e5;border-radius:10px}
+.ctrl input{width:80px}
+.btn{border:0;border-radius:12px;padding:11px 18px;font-weight:800;font-size:1rem;cursor:pointer;background:#eef1f7;color:#1c2436}
+.btn.utama{background:#f4b52c;color:#3b2a00;box-shadow:0 4px 0 #b77f07;font-size:1.1rem}
+.btn.utama:active{transform:translateY(3px);box-shadow:0 1px 0 #b77f07}
+.info{margin-left:auto;font-weight:700;color:#475068}
+details{background:#fff;border-radius:14px;margin-top:10px;padding:10px 16px}
+summary{font-weight:800;cursor:pointer}
+.hadir{columns:4 180px;margin-top:10px}.hadir label{display:block;padding:3px 0;break-inside:avoid}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:16px}
+.kel{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 5px 0 rgba(0,0,0,.18);animation:muncul .3s ease-out both}
+@keyframes muncul{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.kel h3{margin:0;padding:10px 14px;color:#fff;font-size:1.15rem}
+.kel ol{margin:0;padding:10px 14px 14px 34px}.kel li{padding:3px 0;font-weight:600}
+.ketua{background:#fff3cd;border-radius:6px;padding:0 6px}
+.kosong{color:#fff;text-align:center;padding:40px;font-size:1.2rem;opacity:.85}
+@media print{body{background:#fff}.ctrl,details,#gk-header{display:none}.kel{box-shadow:none;border:1px solid #999;break-inside:avoid}}
+</style></head><body>
+<div id="gk-header"></div>
+<div class="wrap">
+  <div class="ctrl">
+    <select id="cara"><option value="jumlah">Jumlah kelompok</option><option value="anggota">Anggota per kelompok</option></select>
+    <input type="number" id="angka" min="1" max="50">
+    <button class="btn utama" id="acak">🎲 Acak kelompok</button>
+    <button class="btn" id="salin">Salin teks</button>
+    <button class="btn" onclick="window.print()">Cetak</button>
+    <span class="info" id="info"></span>
+  </div>
+  <details><summary id="ringkas">Daftar hadir</summary>
+    <p><button class="btn" id="semua">Centang semua</button> <button class="btn" id="tidak">Hapus semua centang</button></p>
+    <div class="hadir" id="hadir"></div>
+  </details>
+  <div class="grid" id="hasil"></div>
+  <div class="kosong" id="kosong">Tekan <b>Acak kelompok</b> untuk membagi murid.</div>
+</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, P = D.pengaturan || {};
+  var WARNA = ['#d64545', '#1f6fd1', '#e0a01a', '#1f9d6b', '#7b4bd1', '#e07b28', '#0f8fa8', '#c2378a'];
+  var nama = D.nama || [], hasil = [];
+  function $(id) { return document.getElementById(id); }
+  $('cara').value = P.cara === 'anggota' ? 'anggota' : 'jumlah';
+  $('angka').value = P.angka || 5;
+
+  nama.forEach(function (n, i) {
+    var l = document.createElement('label');
+    l.innerHTML = '<input type="checkbox" checked data-i="' + i + '"> <span></span>';
+    l.querySelector('span').textContent = n;
+    $('hadir').appendChild(l);
+  });
+  function hadir() {
+    return Array.prototype.filter.call($('hadir').querySelectorAll('input'), function (c) { return c.checked; })
+      .map(function (c) { return nama[+c.dataset.i]; });
+  }
+  function ringkas() { var h = hadir().length; $('ringkas').textContent = 'Daftar hadir: ' + h + ' dari ' + nama.length + ' murid'; return h; }
+  $('hadir').addEventListener('change', ringkas);
+  $('semua').onclick = function () { $('hadir').querySelectorAll('input').forEach(function (c) { c.checked = true; }); ringkas(); };
+  $('tidak').onclick = function () { $('hadir').querySelectorAll('input').forEach(function (c) { c.checked = false; }); ringkas(); };
+  ringkas();
+
+  function bagi(list) {
+    var n = list.length, x = Math.max(1, parseInt($('angka').value, 10) || 1);
+    var k = $('cara').value === 'jumlah' ? Math.min(x, n) : Math.ceil(n / x);
+    var g = []; for (var i = 0; i < k; i++) g.push([]);
+    GK.shuffle(list).forEach(function (m, i) { g[i % k].push(m); });
+    return g;
+  }
+  function render(g, final) {
+    $('hasil').innerHTML = '';
+    $('kosong').style.display = g.length ? 'none' : 'block';
+    g.forEach(function (anggota, i) {
+      var d = document.createElement('div'); d.className = 'kel';
+      if (final) d.style.animationDelay = (i * 60) + 'ms'; else d.style.animation = 'none';
+      d.innerHTML = '<h3 style="background:' + WARNA[i % WARNA.length] + '">Kelompok ' + (i + 1) + ' <small>(' + anggota.length + ')</small></h3><ol></ol>';
+      var ketua = final && P.ketua ? Math.floor(Math.random() * anggota.length) : -1;
+      anggota.forEach(function (m, j) {
+        var li = document.createElement('li'); li.textContent = m + (j === ketua ? ' ⭐ ketua' : '');
+        if (j === ketua) li.className = 'ketua';
+        d.querySelector('ol').appendChild(li);
+      });
+      if (final) { anggota.ketua = ketua; }
+      $('hasil').appendChild(d);
+    });
+    $('info').textContent = g.length ? g.length + ' kelompok' : '';
+  }
+  $('acak').onclick = function () {
+    var list = hadir();
+    if (list.length < 2) { GK.toast('Centang minimal 2 murid yang hadir', '#d64545', 1800); return; }
+    var btn = $('acak'), putaran = 0; btn.disabled = true;
+    var t = setInterval(function () {
+      render(bagi(list), false); GK.beep(500 + putaran * 30, .03, 'triangle');
+      if (++putaran >= 12) { clearInterval(t); hasil = bagi(list); render(hasil, true); GK.sfxBenar(); btn.disabled = false; }
+    }, 80);
+  };
+  $('salin').onclick = function () {
+    if (!hasil.length) { GK.toast('Acak kelompok terlebih dahulu', '#d64545'); return; }
+    var teks = (D.judul || 'Kelompok') + (D.kelas ? ' - ' + D.kelas : '') + '\n\n' + hasil.map(function (g, i) {
+      return 'Kelompok ' + (i + 1) + ':\n' + g.map(function (m, j) { return (j + 1) + '. ' + m + (j === g.ketua ? ' (ketua)' : ''); }).join('\n');
+    }).join('\n\n');
+    (navigator.clipboard ? navigator.clipboard.writeText(teks) : Promise.reject()).then(function () { GK.toast('Tersalin. Tempel di WhatsApp atau dokumen.'); })
+      .catch(function () { prompt('Salin teks berikut:', teks); });
+  };
+  GK.start({ needName: false, onStart: function () {} });
+})();
+</script>
+</body></html>

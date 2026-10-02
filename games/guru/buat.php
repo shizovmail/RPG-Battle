@@ -67,6 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$u['id'], $kode, $judul, new_slug($judul), $kelasLbl, $json, bin2hex(random_bytes(8))]);
             $gid = (int)db()->lastInsertId();
         }
+        if ($mode === 'soal') simpan_visibilitas($gid, $u['id']);
         try {
             generate_game($gid);
             flash($game ? 'Perubahan disimpan dan game sudah diperbarui. Link & QR tetap sama.' : 'Game berhasil dibuat!');
@@ -151,8 +152,11 @@ page_header(($game ? 'Edit ' : 'Buat ') . $m['nama'], 'guru/');
     </div>
   </section>
 
+  <?php if ($mode === 'soal') bank_vis_card($game); ?>
+
   <?php if ($mode === 'soal'): ?>
   <section class="card">
+    <?php bank_panel($kode); ?>
     <div class="sec-head"><h2><?= e($m['judul_daftar'] ?? 'Soal') ?> <span class="muted" id="jml-soal"></span></h2>
       <details class="menu"><summary class="btn small">Tempel banyak soal sekaligus</summary>
         <div class="menu-box wide-box">

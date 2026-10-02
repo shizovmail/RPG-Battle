@@ -1,0 +1,19 @@
+{
+  "kode": "quiz",
+  "nama": "Kuis Pilihan Ganda",
+  "ikon": "❓",
+  "urutan": 1,
+  "deskripsi": "Kuis klasik dengan tombol jawaban warna-warni, batas waktu per soal, dan nilai otomatis.",
+  "petunjuk": "Tulis pertanyaan dan 2–4 pilihan jawaban, lalu tandai jawaban yang benar.",
+  "mode": "soal",
+  "skor": true,
+  "min_soal": 1,
+  "max_soal": 60,
+  "jumlah_opsi": 4,
+  "min_opsi": 2,
+  "pengaturan": [
+    {"nama": "waktu_soal", "label": "Waktu per soal (detik, 0 = tanpa batas)", "tipe": "number", "default": 30, "min": 0, "max": 300},
+    {"nama": "acak_soal", "label": "Acak urutan soal", "tipe": "checkbox", "default": true},
+    {"nama": "acak_opsi", "label": "Acak urutan pilihan jawaban", "tipe": "checkbox", "default": true}
+  ]
+}

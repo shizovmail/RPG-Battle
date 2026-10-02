@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__GAME_TITLE__</title>
+<style>
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#7b2d8e;background-image:radial-gradient(circle at 50% 30%,#a14bb8,transparent 70%);min-height:100vh;color:#fff}
+.wrap{max-width:1100px;margin:0 auto;padding:14px;display:grid;grid-template-columns:1fr 280px;gap:20px;align-items:start}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}}
+.roda{position:relative;display:flex;flex-direction:column;align-items:center;gap:16px}
+.pin{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-top:44px solid #f4b52c;filter:drop-shadow(0 4px 2px rgba(0,0,0,.35));z-index:2}
+canvas{max-width:100%;border-radius:50%;box-shadow:0 0 0 10px #fff,0 16px 40px rgba(0,0,0,.4);cursor:pointer}
+.putar{border:0;border-radius:999px;background:#f4b52c;color:#3a1245;font-size:1.4rem;font-weight:900;padding:16px 46px;cursor:pointer;box-shadow:0 6px 0 #b77f07}
+.putar:active{transform:translateY(4px);box-shadow:0 2px 0 #b77f07}.putar:disabled{opacity:.6}
+.side{background:#fff;color:#1c2436;border-radius:18px;padding:16px}
+.side h3{margin:.2em 0 .5em}
+.side ol{padding-left:22px;margin:0;max-height:40vh;overflow:auto}.side li{padding:3px 0;font-weight:600}
+.kecil{border:1.5px solid #d0d7e5;background:#fff;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;width:100%;margin-top:10px}
+.sisa{color:#667085;font-size:.9rem}
+.menang{font-size:2.6rem;font-weight:900;color:#7b2d8e;word-break:break-word}
+</style></head><body>
+<div id="gk-header"></div>
+<div class="wrap">
+  <div class="roda">
+    <div class="pin"></div>
+    <canvas id="cv"></canvas>
+    <button class="putar" id="putar">PUTAR!</button>
+  </div>
+  <div class="side">
+    <h3>Terpilih</h3>
+    <ol id="riwayat"></ol>
+    <p class="sisa" id="sisa"></p>
+    <button class="kecil" id="reset">Kembalikan semua nama</button>
+    <button class="kecil" id="layar">Layar penuh</button>
+  </div>
+</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, P = D.pengaturan || {};
+  var WARNA = ['#d64545', '#1f6fd1', '#e0a01a', '#1f9d6b', '#7b4bd1', '#e07b28', '#0f8fa8', '#c2378a'];
+  var semua = (D.nama || []).slice(), aktif = GK.shuffle(semua), rot = 0, spinning = false, riwayat = [];
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), S = 500, TAU = Math.PI * 2;
+  function $(id) { return document.getElementById(id); }
+
+  function ukur() {
+    S = Math.min(window.innerWidth - 40, window.innerHeight - 200, 620); S = Math.max(S, 260);
+    var r = window.devicePixelRatio || 1;
+    cv.width = S * r; cv.height = S * r; cv.style.width = S + 'px'; cv.style.height = S + 'px';
+    ctx.setTransform(r, 0, 0, r, 0, 0); gambar();
+  }
+  function gambar() {
+    var n = aktif.length, R = S / 2, a = TAU / Math.max(n, 1);
+    ctx.clearRect(0, 0, S, S);
+    if (!n) {
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(R, R, R, 0, TAU); ctx.fill();
+      ctx.fillStyle = '#7b2d8e'; ctx.font = '800 22px system-ui'; ctx.textAlign = 'center'; ctx.fillText('Semua nama sudah terpilih', R, R); return;
+    }
+    for (var i = 0; i < n; i++) {
+      ctx.beginPath(); ctx.moveTo(R, R);
+      ctx.arc(R, R, R, rot + i * a, rot + (i + 1) * a);
+      ctx.fillStyle = WARNA[(n % WARNA.length === 1 && i === n - 1) ? 2 : i % WARNA.length]; ctx.fill();
+      ctx.save(); ctx.translate(R, R); ctx.rotate(rot + (i + .5) * a);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      var fs = Math.max(11, Math.min(26, R * a * .55, 360 / Math.sqrt(n)));
+      ctx.font = '800 ' + fs + 'px system-ui';
+      var t = aktif[i]; if (t.length > 18) t = t.slice(0, 17) + '…';
+      ctx.fillText(t, R - 16, 0); ctx.restore();
+    }
+    ctx.beginPath(); ctx.arc(R, R, R * .1, 0, TAU); ctx.fillStyle = '#fff'; ctx.fill();
+    $('sisa').textContent = n + ' nama di roda';
+  }
+  function indexDiPin() {
+    var a = TAU / aktif.length, p = ((1.5 * Math.PI - rot) % TAU + TAU) % TAU;
+    return Math.floor(p / a) % aktif.length;
+  }
+  function putar() {
+    if (spinning || !aktif.length) return;
+    spinning = true; $('putar').disabled = true;
+    var n = aktif.length, a = TAU / n, pilih = Math.floor(Math.random() * n);
+    var target = 1.5 * Math.PI - (pilih + .5) * a + (Math.random() - .5) * a * .7;
+    var delta = ((target - rot) % TAU + TAU) % TAU;
+    var dari = rot, ke = rot + TAU * (5 + Math.floor(Math.random() * 3)) + delta;
+    var dur = (+P.durasi || 5) * 1000, t0 = performance.now(), terakhir = indexDiPin();
+    function frame(now) {
+      var t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 4);
+      rot = dari + (ke - dari) * e; gambar();
+      var i = indexDiPin(); if (i !== terakhir) { terakhir = i; GK.beep(900, .03, 'triangle'); }
+      if (t < 1) requestAnimationFrame(frame); else selesai();
+    }
+    requestAnimationFrame(frame);
+  }
+  function selesai() {
+    rot = rot % TAU;
+    var i = indexDiPin(), nama = aktif[i];
+    riwayat.push(nama);
+    var li = document.createElement('li'); li.textContent = nama; $('riwayat').appendChild(li);
+    GK.sfxBenar();
+    var ov = GK.overlay('<div class="gk-emoji">🎉</div><p>Yang terpilih:</p><div class="menang"></div><br><button class="gk-btn" id="ok">Oke</button>');
+    ov.querySelector('.menang').textContent = nama;
+    ov.querySelector('#ok').onclick = function () {
+      ov.remove();
+      if (P.hapus_terpilih) { aktif.splice(i, 1); gambar(); }
+      spinning = false; $('putar').disabled = !aktif.length;
+    };
+  }
+  $('putar').onclick = putar;
+  cv.onclick = putar;
+  document.addEventListener('keydown', function (e) { if (e.code === 'Space' && !document.querySelector('.gk-ov')) { e.preventDefault(); putar(); } });
+  $('reset').onclick = function () {
+    if (spinning) return;
+    aktif = GK.shuffle(semua); riwayat = []; $('riwayat').innerHTML = ''; $('putar').disabled = false; gambar();
+  };
+  $('layar').onclick = function () { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); };
+  window.addEventListener('resize', ukur);
+  GK.start({ needName: false, onStart: function () { ukur(); } });
+  ukur();
+})();
+</script>
+</body></html>

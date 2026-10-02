@@ -1,0 +1,18 @@
+{
+  "kode": "tarik_tambang",
+  "nama": "Tarik Tambang Live (Tim vs Tim)",
+  "ikon": "🪢",
+  "urutan": 8,
+  "deskripsi": "Pertandingan live dua tim (Merah vs Putih) bertema HUT RI. Guru jadi wasit, murid menjawab dari HP, tali ditarik di layar proyektor.",
+  "petunjuk": "Buat bank soal (pilihan ganda, isian singkat, atau campuran). Setelah disimpan, buka panel wasit untuk memulai sesi.",
+  "tag": "Live · butuh layar proyektor",
+  "mode": "soal",
+  "live": true,
+  "grup": "live_tarik_tambang",
+  "skor": true,
+  "min_soal": 2,
+  "max_soal": 200,
+  "jumlah_opsi": 4,
+  "min_opsi": 2,
+  "pengaturan": []
+}

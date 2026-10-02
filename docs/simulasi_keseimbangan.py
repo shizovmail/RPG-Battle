@@ -2,11 +2,13 @@
 """
 Simulasi keseimbangan RPG Battle (4 vs 4 atau 5 vs 5 dengan Fighter).
 
-Meniru aturan game (games/inc/rpg.php). Dua gaya pemain:
+Meniru aturan game (games/inc/rpg.php), termasuk semua persen damage/heal yang diacak. Dua gaya pemain:
   acak     : skill & target dipilih acak (skill utama lebih sering) -> batas bawah kualitas bermain
   terarah  : menyerang 2 lawan terlemah (acak di antaranya), tank/healer/fighter melindungi 2 sekutu terlemah
 Jawaban benar dengan peluang p. Pertandingan berakhir bila satu tim habis atau giliran maksimum tercapai
 (= soal habis), lalu pemenang: karakter hidup lebih banyak, bila sama total HP lebih besar.
+
+Laporan: persentase cara menang, serta per peran: kill akhir, damage, seberapa cepat pingsan, dan daya tahan.
 
 Jalankan:  python3 docs/simulasi_keseimbangan.py [giliran_maks] [jumlah_simulasi]
 """
@@ -14,34 +16,38 @@ import random, statistics as st, sys
 
 BASE = ['tank', 'assassin', 'mage', 'healer']
 CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s1': 2, 's2': 3},
-      'mage': {'s1': 3, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
-STRIKE, HEAL_ALL = 2.75, 0.55
-STAT = {  # sama dengan rpg_stat_bawaan() di PHP
+      'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
+BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
+STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend, heal
     'tank': dict(hp=240, atk=24, df=12, heal=0),
-    'fighter': dict(hp=175, atk=48, df=9, heal=0),
-    'assassin': dict(hp=110, atk=75, df=5, heal=0),
-    'mage': dict(hp=125, atk=55, df=6, heal=0),
-    'healer': dict(hp=135, atk=30, df=8, heal=30),
+    'fighter': dict(hp=190, atk=48, df=9, heal=0),
+    'assassin': dict(hp=135, atk=75, df=5, heal=0),
+    'mage': dict(hp=150, atk=55, df=6, heal=0),
+    'healer': dict(hp=150, atk=30, df=8, heal=30),
 }
 
 
 def main_satu(S, p, seed, maks, fighter, gaya):
     rnd = random.Random(seed)
+    U_ = lambda r: rnd.uniform(*r)
     roles = BASE[:1] + (['fighter'] if fighter else []) + BASE[1:]
     U = [dict(t=t, r=r, hp=S[r]['hp'], mx=S[r]['hp'], atk=S[r]['atk'], df=S[r]['df'], heal=S[r]['heal'],
-              cd={'s1': 0, 's2': 0}, siap=0, kut=0, dead=False) for t in (0, 1) for r in roles]
+              cd={'s1': 0, 's2': 0}, siap=0, kut=0, mati=None, dmg=0, kill=0) for t in (0, 1) for r in roles]
     A = lambda t: [x for x in U if x['t'] == t and x['hp'] > 0]
+    pertama = {}
     rounds = 0
     while rounds < maks and A(0) and A(1):
         rounds += 1
         acts = []
+        lemah2 = lambda L: rnd.choice(sorted(L, key=lambda x: x['hp'] / x['mx'])[:2])
         for u in U:
             if u['hp'] <= 0: continue
             en, al, r = A(1 - u['t']), A(u['t']), u['r']
             if not en: continue
             tg = None
+            pilih_en = (lambda: rnd.choice(sorted(en, key=lambda x: x['hp'])[:2])) if gaya == 'terarah' else (lambda: rnd.choice(en))
             if u['siap']:
-                sk = 'strike'; tg = rnd.choice(sorted(en, key=lambda x: x['hp'])[:2]) if gaya == 'terarah' else rnd.choice(en)
+                sk = 'strike'; tg = pilih_en()
             else:
                 av = ['basic'] + [k for k in ('s1', 's2') if u['cd'][k] == 0]
                 w = {'basic': 1, 's1': 4, 's2': 4}
@@ -49,16 +55,15 @@ def main_satu(S, p, seed, maks, fighter, gaya):
                     w['s1'] = 6 if any(x['hp'] < x['mx'] * .7 for x in al) else .5
                     w['s2'] = 5 if sum(x['hp'] < x['mx'] * .8 for x in al) >= 2 else .5
                 sk = rnd.choices(av, [w[a] for a in av])[0]
-                lemah = lambda L: rnd.choice(sorted(L, key=lambda x: x['hp'] / x['mx'])[:2])
+                pilih_al = (lambda L: lemah2(L)) if gaya == 'terarah' else (lambda L: rnd.choice(L))
                 if r == 'tank' and sk == 's1':
                     lain = [x for x in al if x is not u]
                     if not lain: sk = 'basic'
-                    else: tg = lemah(lain) if gaya == 'terarah' else rnd.choice(lain)
-                elif r in ('healer', 'fighter') and sk == 's1': tg = lemah(al) if gaya == 'terarah' else rnd.choice(al)
+                    else: tg = pilih_al(lain)
+                elif r in ('healer', 'fighter') and sk == 's1': tg = pilih_al(al)
                 elif sk == 'basic' or (r in ('assassin', 'fighter') and sk in ('s1', 's2')) or (r == 'mage' and sk == 's2'):
-                    if r == 'fighter' and sk == 's1': tg = rnd.choice(al)
-                    else: tg = (rnd.choice(sorted(en, key=lambda x: x['hp'])[:2]) if gaya == 'terarah' else rnd.choice(en))
-            if sk == 'basic' and tg is None: tg = rnd.choice(sorted(en, key=lambda x: x['hp'])[:2]) if gaya == 'terarah' else rnd.choice(en)
+                    tg = pilih_en()
+            if sk == 'basic' and tg is None: tg = pilih_en()
             ok = rnd.random() < p
             if u['kut']:
                 u['kut'] = 0
@@ -72,7 +77,7 @@ def main_satu(S, p, seed, maks, fighter, gaya):
             if not ok: continue
             if r == 'tank' and sk == 's1': tguard[id(tg)] = u
             if r == 'tank' and sk == 's2':
-                for x in A(u['t']): benteng[id(x)] = .20
+                for x in A(u['t']): benteng[id(x)] = U_((.15, .25))
             if r == 'fighter' and sk == 's1':
                 if tg is u: fself.add(id(u))
                 else: fguard[id(tg)] = u
@@ -80,58 +85,61 @@ def main_satu(S, p, seed, maks, fighter, gaya):
             if r == 'mage' and sk == 's2': curses.append(tg)
         for u, sk, tg, ok in acts:
             if ok and u['r'] == 'healer':
-                tl = [tg] if sk == 's1' else A(u['t']); amt = u['heal'] if sk == 's1' else u['heal'] * HEAL_ALL
+                tl = [tg] if sk == 's1' else A(u['t'])
                 for x in tl:
-                    if x['hp'] > 0: x['hp'] = min(x['mx'], x['hp'] + amt)
-        stat = dict(dd=0)
+                    if x['hp'] > 0:
+                        amt = max(1, round(u['heal'] * (U_((.85, 1.15)) if sk == 's1' else U_((.45, .70)))))
+                        x['hp'] = min(x['mx'], x['hp'] + amt)
 
-        def kena(x, d):
-            e = min(d, x['hp']); x['hp'] -= e
+        def kena(x, d, src):
+            e = min(d, x['hp']); x['hp'] -= e; src['dmg'] += e
+            if x['hp'] <= 0 and e > 0 and x['mati'] is None:
+                x['mati'] = rounds; src['kill'] += 1
+                pertama.setdefault(x['t'], x)
 
-        def serangan(x, raw):
-            """raw = damage yang tertuju ke x (selisih attack-defend sudah dihitung)."""
-            raw = max(1, round(raw * benteng.get(id(x), 1)))
+        def serangan(x, raw, src):
+            """raw = damage tertuju ke x. Urutan: Benteng -> tank menangkis -> fighter melompat -> fighter menghindar."""
+            raw = max(1, round(raw))
+            if id(x) in benteng: raw = max(1, round(raw * benteng[id(x)]))
             gt = tguard.get(id(x))
             if gt is not None and gt['hp'] > 0 and gt is not x:
-                kena(gt, max(1, round(raw * .10))); return
+                kena(gt, max(1, round(raw * U_((.05, .15)))), src); return
             fg = fguard.get(id(x))
             if fg is not None and fg['hp'] > 0 and fg is not x:
-                kena(x, max(1, round(raw * .20)))
-                bagian = max(1, round(raw * .35))
+                kena(x, max(1, round(raw * U_((.05, .25)))), src)
+                bagian = max(1, round(raw * U_((.10, .40))))
                 gt2 = tguard.get(id(fg))
-                if gt2 is not None and gt2['hp'] > 0: kena(gt2, max(1, round(bagian * .10)))
-                else: kena(fg, bagian)
+                if gt2 is not None and gt2['hp'] > 0: kena(gt2, max(1, round(bagian * U_((.05, .15)))), src)
+                else: kena(fg, bagian, src)
                 return
-            if id(x) in fself: raw = max(1, round(raw * .20))
-            kena(x, raw)
+            if id(x) in fself: raw = max(1, round(raw * U_((.05, .25))))
+            kena(x, raw, src)
         rnd.shuffle(acts)
         for u, sk, tg, ok in acts:
             if not ok: continue
             r = u['r']
-            bm = rnd.uniform(.10, .20)
             if sk == 'basic':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * bm - tg['df'])))
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_(BASIC[r]) - tg['df'])), u)
             elif r == 'assassin' and sk == 's1':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] - tg['df'])))
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_((.90, 1.40)) - tg['df'])), u)
             elif sk == 'strike':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * STRIKE - tg['df'])))
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, max(1, round(u['atk'] * U_((2.30, 2.80)) - tg['df'])), u)
             elif r == 'mage' and sk == 's1':
                 for x in A(1 - u['t']):
-                    if id(x) not in stealth: serangan(x, max(1, round(u['atk'] - x['df'])))
+                    if id(x) not in stealth: serangan(x, max(1, round(u['atk'] * U_((.65, 1.0)) - x['df'])), u)
             elif r == 'fighter' and sk == 's2':
                 if id(tg) not in stealth and tg['hp'] > 0:
-                    total = max(4, round(u['atk'] * .80 - tg['df']))      # 4 pukulan (20% x4): selisih defend dihitung sekali
-                    for _ in range(4): serangan(tg, max(1, round(total / 4)))
+                    ms = [U_((.15, .30)) for _ in range(4)]
+                    total = max(4, round(u['atk'] * sum(ms) - tg['df']))
+                    for m in ms: serangan(tg, max(1, round(total * m / sum(ms))), u)    # tiap pukulan lewat penjagaan sendiri-sendiri
                 lain = [x for x in A(1 - u['t']) if x is not tg] or [tg]
                 t2 = rnd.choice(lain)
-                if id(t2) not in stealth and t2['hp'] > 0: serangan(t2, max(1, round(u['atk'] * .55 - t2['df'])))
+                if id(t2) not in stealth and t2['hp'] > 0: serangan(t2, max(1, round(u['atk'] * U_((.45, .65)) - t2['df'])), u)
         for x in curses: x['kut'] = 1
         for u in U:
             for k in ('s1', 's2'):
                 if u['cd'][k] > 0: u['cd'][k] -= 1
-            if u['hp'] <= 0:
-                u['siap'] = 0
-                u['dead'] = True
+            if u['hp'] <= 0: u['siap'] = 0
     a0, a1 = len(A(0)), len(A(1))
     h0, h1 = sum(x['hp'] for x in A(0)), sum(x['hp'] for x in A(1))
     if a0 == 0 and a1 == 0: how, win = 'seri', -1
@@ -140,28 +148,50 @@ def main_satu(S, p, seed, maks, fighter, gaya):
     elif a0 != a1: how, win = 'hidup', 0 if a0 > a1 else 1
     elif h0 != h1: how, win = 'hp', 0 if h0 > h1 else 1
     else: how, win = 'seri', -1
-    mati = {}
+    per = {}
     for u in U:
-        if u['dead']: mati[u['r']] = mati.get(u['r'], 0) + 1
-    return dict(rounds=rounds, win=win, how=how, mati=mati, n=len(roles))
+        d = per.setdefault(u['r'], dict(dmg=0, kill=0, mati=0, tahan=0, hidup=0, n=0, pertama=0))
+        d['dmg'] += u['dmg']; d['kill'] += u['kill']; d['n'] += 1
+        d['mati'] += 1 if u['mati'] else 0
+        d['hidup'] += 0 if u['mati'] else 1
+        d['tahan'] += u['mati'] if u['mati'] else rounds
+    for t, x in pertama.items(): per[x['r']]['pertama'] += 1
+    return dict(rounds=rounds, win=win, how=how, per=per, n=len(roles))
 
 
 def laporan(S, p, maks, n, fighter, gaya):
     R = [main_satu(S, p, i, maks, fighter, gaya) for i in range(n)]
     pct = lambda f: round(100 * sum(1 for r in R if f(r)) / n)
     roles = BASE[:1] + (['fighter'] if fighter else []) + BASE[1:]
-    ko = {k: round(sum(r['mati'].get(k, 0) for r in R) / (2 * n), 2) for k in roles}
+    agg = {}
+    for k in roles:
+        d = dict(dmg=0, kill=0, mati=0, tahan=0, hidup=0, n=0, pertama=0)
+        for r in R:
+            for kk in d: d[kk] += r['per'][k][kk]
+        agg[k] = d
+    tdmg = sum(a['dmg'] for a in agg.values()) or 1
+    tkill = sum(a['kill'] for a in agg.values()) or 1
+    tpert = sum(a['pertama'] for a in agg.values()) or 1
+    rep = {k: dict(damage=round(100 * a['dmg'] / tdmg), kill=round(100 * a['kill'] / tkill), pingsan=round(100 * a['mati'] / a['n']),
+                   pertama=round(100 * a['pertama'] / tpert), tahan=round(a['tahan'] / a['n'], 1), selamat=round(100 * a['hidup'] / a['n']),
+                   dmg_rata=round(a['dmg'] / a['n'])) for k, a in agg.items()}
     return dict(giliran=round(st.mean(r['rounds'] for r in R), 1),
                 kiri=pct(lambda r: r['win'] == 0), kanan=pct(lambda r: r['win'] == 1),
                 habis=pct(lambda r: r['how'] == 'habis'), hidup=pct(lambda r: r['how'] == 'hidup'),
-                hp=pct(lambda r: r['how'] == 'hp'), seri=pct(lambda r: r['how'] == 'seri'), ko=ko)
+                hp=pct(lambda r: r['how'] == 'hp'), seri=pct(lambda r: r['how'] == 'seri'), peran=rep)
+
+
+def cetak_peran(rep):
+    print('     %-9s %9s %9s %9s %12s %9s %9s' % ('peran', 'damage%', 'kill-akhir%', 'pingsan%', 'pingsan-pertama%', 'bertahan', 'selamat%'))
+    for k, v in rep.items():
+        print('     %-9s %9d %9d %9d %12d %9.1f %9d' % (k, v['damage'], v['kill'], v['pingsan'], v['pertama'], v['tahan'], v['selamat']))
 
 
 if __name__ == '__main__':
     maks = int(sys.argv[1]) if len(sys.argv) > 1 else 30
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 1500
     print('Stat bawaan:', {k: tuple(v.values()) for k, v in STAT.items()}, '(hp, atk, def, heal)')
-    print('Giliran maksimum %d (= soal habis), %d simulasi per baris, peluang benar p\n' % (maks, n))
+    print('Giliran maksimum %d (= soal habis), %d simulasi per baris\n' % (maks, n))
     for fighter in (False, True):
         for gaya in ('acak', 'terarah'):
             print('== %s | pemain %s' % ('5 vs 5 (dengan Fighter)' if fighter else '4 vs 4', gaya))
@@ -169,4 +199,5 @@ if __name__ == '__main__':
                 r = laporan(STAT, p, maks, n, fighter, gaya)
                 print('  p=%.1f giliran %4.1f | menang Sky/Dark %2d%%/%2d%% | via habis %2d%% · selisih hidup %2d%% · selisih HP %2d%% · seri %d%%' %
                       (p, r['giliran'], r['kiri'], r['kanan'], r['habis'], r['hidup'], r['hp'], r['seri']))
-            print('     karakter tumbang per peran (p=0.9):', r['ko'])
+            print('   Per peran (p=0.7):')
+            cetak_peran(laporan(STAT, 0.7, maks, n, fighter, gaya)['peran'])

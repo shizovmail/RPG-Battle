@@ -1,0 +1,29 @@
+{
+  "kode": "tts",
+  "nama": "Teka-Teki Silang",
+  "ikon": "🔠",
+  "urutan": 7,
+  "deskripsi": "Kotak TTS tersusun otomatis dari jawaban. Murid mengisi huruf berdasarkan petunjuk mendatar dan menurun.",
+  "petunjuk": "Isi petunjuk dan jawabannya. Jawaban berupa satu kata (spasi dan tanda baca akan dihapus otomatis), 2–15 huruf. Agar kotak saling bersilangan, pakai kata-kata yang memiliki huruf yang sama.",
+  "tag": "Pakai petunjuk & jawaban satu kata",
+  "mode": "soal",
+  "grup": "pasangan",
+  "skor": true,
+  "judul_daftar": "Kata",
+  "label_soal": "Petunjuk",
+  "label_opsi": "Jawaban (satu kata)",
+  "contoh_soal": "contoh: Bangun datar dengan tiga sisi",
+  "contoh_opsi": "contoh: SEGITIGA",
+  "contoh_impor": "Bangun datar dengan tiga sisi = SEGITIGA\nHasil kali disebut juga | PRODUK",
+  "jawaban_kata": true,
+  "maks_huruf": 15,
+  "jumlah_opsi": 1,
+  "min_opsi": 1,
+  "min_soal": 2,
+  "max_soal": 20,
+  "pengaturan": [
+    {"nama": "huruf_awal", "label": "Bantu dengan huruf pertama setiap kata", "tipe": "checkbox", "default": false},
+    {"nama": "jumlah_huruf", "label": "Tampilkan jumlah huruf di petunjuk", "tipe": "checkbox", "default": true},
+    {"nama": "waktu_total", "label": "Batas waktu (menit, 0 = tanpa batas)", "tipe": "number", "default": 0, "min": 0, "max": 120}
+  ]
+}

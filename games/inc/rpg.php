@@ -14,21 +14,28 @@
 // =====================================================
 require_once __DIR__ . '/live.php';   // memakai live_norm, live_acak, live_tx
 
-const RPG_BASIC_MIN = 0.10;   // serangan dasar: 10%–20% attack (acak tiap giliran)
-const RPG_BASIC_MAX = 0.20;
-const RPG_AOE = 1.0;          // skill 1 mage (area) = 100% attack
-const RPG_ASSASSIN_1 = 1.0;   // skill 1 assassin = 100% attack, 1 target
-const RPG_STRIKE = 2.75;      // serangan bayangan assassin = 275% attack
-const RPG_LINDUNG_1 = 0.10;   // tank pasang badan untuk 1 anggota: anggota 0 damage, tank menerima 10% dari damage itu
-const RPG_LINDUNG_SEMUA = 0.20; // Benteng Tim: semua anggota menerima 20%
-const RPG_HEAL_SEMUA = 0.55;  // heal semua = 55% heal satu anggota (per anggota)
-const RPG_F_PUKUL = 0.20;     // Fighter skill 2: 4 pukulan x 20% attack ke lawan pertama (total 80%)
+// Semua pengali damage/heal berupa RENTANG yang diacak (seragam) setiap kali dipakai.
+const RPG_AOE = [0.65, 1.00];            // Mage skill 1: tiap lawan mendapat nilai acak sendiri (% attack)
+const RPG_ASSASSIN_1 = [0.90, 1.40];     // Assassin skill 1 (Critical bila > 115%)
+const RPG_STRIKE = [2.30, 2.80];         // Serangan Bayangan (Critical bila > 250%)
+const RPG_CRIT = ['basic' => 0.40, 's1' => 1.15, 'strike' => 2.50];   // ambang Critical Assassin
+const RPG_TANK_TERIMA = [0.05, 0.15];    // Tank Pasang Badan: tank menerima 5-15% damage yang tertuju ke teman
+const RPG_BENTENG = [0.15, 0.25];        // Benteng Tim: damage masuk 15-25% (acak per target)
+const RPG_F_TEMAN = [0.05, 0.25];        // Fighter Lompat Pelindung: teman menerima 5-25%
+const RPG_F_DIRI = [0.10, 0.40];         // ... fighter menerima 10-40%
+const RPG_F_MENGHINDAR = [0.05, 0.25];   // ... melindungi diri sendiri (menghindar): 5-25%
+const RPG_F_PUKUL = [0.15, 0.30];        // Fighter Rentetan Pukulan: tiap pukulan lawan pertama (4 pukulan)
 const RPG_F_PUKUL_N = 4;
-const RPG_F_SUSUL = 0.55;     // lalu 1 pukulan 55% attack ke lawan kedua
-const RPG_F_TEMAN = 0.20;     // Fighter skill 1: sekutu yang dilindungi menerima 20% damage
-const RPG_F_DIRI = 0.35;      // ... dan fighter menerima 35% damage yang tertuju ke sekutu itu
-const RPG_F_MENGHINDAR = 0.20; // melindungi diri sendiri (menghindar): menerima 20%
-const RPG_KUTUK_GAGAL = 75;   // peluang (%) jawaban benar dianggap gagal saat dikutuk
+const RPG_F_SUSUL = [0.45, 0.65];        // pukulan ke lawan kedua
+const RPG_HEAL_1 = [0.85, 1.15];         // Healer skill 1: 85-115% stat heal
+const RPG_HEAL_SEMUA = [0.45, 0.70];     // Healer skill 2: 45-70% stat heal, acak per teman
+const RPG_KUTUK_GAGAL = 75;              // peluang (%) jawaban benar dianggap gagal saat dikutuk
+function rpg_basic_rentang($peran)
+{
+    $r = ['tank' => [0.10, 0.20], 'healer' => [0.05, 0.25], 'mage' => [0.10, 0.30], 'assassin' => [0.20, 0.50], 'fighter' => [0.15, 0.35]];
+    return $r[$peran] ?? [0.10, 0.20];
+}
+function rpg_acak(array $r) { return random_int((int)round($r[0] * 1000), (int)round($r[1] * 1000)) / 1000; }
 
 function rpg_peran_list() { return ['tank', 'assassin', 'mage', 'healer']; }      // 4 peran dasar (indeks unit 0..7)
 function rpg_peran_semua() { return ['tank', 'fighter', 'assassin', 'mage', 'healer']; }
@@ -127,10 +134,10 @@ function rpg_stat_bawaan()
 {
     return [
         'tank'     => ['hp' => 240, 'atk' => 24, 'def' => 12, 'heal' => 0],
-        'fighter'  => ['hp' => 175, 'atk' => 48, 'def' => 9,  'heal' => 0],
-        'assassin' => ['hp' => 110, 'atk' => 75, 'def' => 5,  'heal' => 0],
-        'mage'     => ['hp' => 125, 'atk' => 55, 'def' => 6,  'heal' => 0],
-        'healer'   => ['hp' => 135, 'atk' => 30, 'def' => 8,  'heal' => 30],
+        'fighter'  => ['hp' => 190, 'atk' => 48, 'def' => 9,  'heal' => 0],
+        'assassin' => ['hp' => 135, 'atk' => 75, 'def' => 5,  'heal' => 0],
+        'mage'     => ['hp' => 150, 'atk' => 55, 'def' => 6,  'heal' => 0],
+        'healer'   => ['hp' => 150, 'atk' => 30, 'def' => 8,  'heal' => 30],
     ];
 }
 
@@ -222,46 +229,46 @@ function rpg_parse_soal($raw, array $jenis, &$err, $mode = 'biasa')
 function rpg_skill_katalog($peran, $tim = 1)
 {
     $basic = ['id' => 'basic', 'nama' => 'Serangan Dasar', 'ikon' => '⚔️', 'tgt' => 'musuh', 'cd' => 0,
-        'desc' => 'Menyerang 1 lawan dengan damage kecil (10%–20% attack, acak tiap giliran). Tanpa cooldown.'];
+        'desc' => 'Menyerang 1 lawan dengan damage kecil (' . (int)round(rpg_basic_rentang($peran)[0] * 100) . '–' . (int)round(rpg_basic_rentang($peran)[1] * 100) . '% attack, acak tiap giliran). Tanpa cooldown.'];
     switch ($peran) {
         case 'tank':
             return [
                 ['id' => 's1', 'nama' => 'Pasang Badan', 'ikon' => '🛡️', 'tgt' => 'sekutu_lain', 'cd' => 0,
-                    'desc' => 'Pindah ke depan 1 TEMAN (bukan diri sendiri) dan tangkis serangan untuknya: teman itu TIDAK menerima damage, kamu menerima 10% dari damage itu. Tanpa cooldown.'],
+                    'desc' => 'Pindah ke depan 1 TEMAN (bukan diri sendiri) dan tangkis serangan untuknya: teman itu TIDAK menerima damage, kamu menerima 5–15% dari damage itu (acak). Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Benteng Tim', 'ikon' => '🏰', 'tgt' => 'tidak', 'cd' => 2,
-                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 20%. Cooldown 2 giliran.'],
+                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 15–25% (acak per anggota). Cooldown 2 giliran.'],
                 $basic,
             ];
         case 'fighter':
             return [
                 ['id' => 's1', 'nama' => 'Lompat Pelindung', 'ikon' => '🤸', 'tgt' => 'sekutu', 'cd' => 2,
-                    'desc' => 'Melompat ke depan 1 teman dan menangkis serangan untuknya: teman menerima 20% damage, kamu menerima 35%. Bila dipilih untuk diri sendiri, kamu menghindar dan hanya menerima 20%. Cooldown 2 giliran.'],
+                    'desc' => 'Melompat ke depan 1 teman dan menangkis serangan untuknya: teman menerima 5–25% damage, kamu menerima 10–40%. Bila dipilih untuk diri sendiri, kamu menghindar dan hanya menerima 5–25%. Cooldown 2 giliran.'],
                 ['id' => 's2', 'nama' => 'Rentetan Pukulan', 'ikon' => '🥊', 'tgt' => 'musuh', 'cd' => 2,
-                    'desc' => 'Melompat ke 1 lawan: 4 pukulan beruntun (masing-masing 20% attack, total 80%), lalu melompat ke lawan lain (acak) dengan 1 pukulan 55% attack, lalu salto kembali. Cooldown 2 giliran.'],
+                    'desc' => 'Melompat ke 1 lawan: 4 pukulan beruntun (masing-masing 15–30% attack), lalu melompat ke lawan lain (acak) dengan 1 pukulan 45–65% attack, lalu salto kembali. Cooldown 2 giliran.'],
                 $basic,
             ];
         case 'healer':
             return [
                 ['id' => 's1', 'nama' => 'Penyembuhan', 'ikon' => '💚', 'tgt' => 'sekutu', 'cd' => 0,
-                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri) sebesar stat Heal. Tanpa cooldown.'],
+                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri) sebesar 85–115% stat Heal. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Hujan Cahaya', 'ikon' => '🌟', 'tgt' => 'tidak', 'cd' => 3,
-                    'desc' => 'Pulihkan HP SEMUA anggota tim, lebih sedikit dari penyembuhan tunggal. Cooldown 3 giliran.'],
+                    'desc' => 'Pulihkan HP SEMUA anggota tim sebesar 45–70% stat Heal (acak tiap teman). Cooldown 3 giliran.'],
                 $basic,
             ];
         case 'assassin':
             return [
                 ['id' => 's1', 'nama' => 'Tusukan Mematikan', 'ikon' => '🗡️', 'tgt' => 'musuh', 'cd' => 2,
-                    'desc' => 'Damage 100% ke 1 lawan (damage terbesar di antara semua peran). Cooldown 2 giliran.'],
+                    'desc' => 'Damage 90–140% attack ke 1 lawan; di atas 115% = CRITICAL. Damage terbesar di antara semua peran. Cooldown 2 giliran.'],
                 ['id' => 's2', 'nama' => 'Bayangan', 'ikon' => '👤', 'tgt' => 'tidak', 'cd' => 3,
-                    'desc' => 'Menghilang (tak bisa diserang giliran ini). Giliran berikutnya, jika benar lagi, serang 1 lawan dengan damage 275%! Harus benar 2 kali berturut-turut. Cooldown 3 giliran.'],
+                    'desc' => 'Menghilang (tak bisa diserang giliran ini). Giliran berikutnya, jika benar lagi, serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL)! Harus benar 2 kali berturut-turut. Cooldown 3 giliran.'],
                 $basic,
             ];
         case 'mage':
             $s1 = $tim === 2
-                ? ['nama' => 'Badai Es', 'ikon' => '❄️', 'desc' => 'Menjatuhkan batu es ke SEMUA lawan, damage 100% attack. Cooldown 3 giliran.']
-                : ['nama' => 'Hujan Meteor', 'ikon' => '☄️', 'desc' => 'Menjatuhkan meteor ke SEMUA lawan, damage 100% attack. Cooldown 3 giliran.'];
+                ? ['nama' => 'Badai Es', 'ikon' => '❄️', 'desc' => 'Menjatuhkan batu es ke SEMUA lawan, damage 65–100% attack (acak tiap lawan). Cooldown 2 giliran.']
+                : ['nama' => 'Hujan Meteor', 'ikon' => '☄️', 'desc' => 'Menjatuhkan meteor ke SEMUA lawan, damage 65–100% attack (acak tiap lawan). Cooldown 2 giliran.'];
             return [
-                ['id' => 's1', 'nama' => $s1['nama'], 'ikon' => $s1['ikon'], 'tgt' => 'tidak', 'cd' => 3, 'desc' => $s1['desc']],
+                ['id' => 's1', 'nama' => $s1['nama'], 'ikon' => $s1['ikon'], 'tgt' => 'tidak', 'cd' => 2, 'desc' => $s1['desc']],
                 ['id' => 's2', 'nama' => 'Kutukan', 'ikon' => '💀', 'tgt' => 'musuh', 'cd' => 2,
                     'desc' => 'Kutuk 1 lawan: giliran berikutnya 75% peluang ia GAGAL walau menjawab benar. Lawan tidak tahu siapa yang dikutuk. Cooldown 2 giliran.'],
                 $basic,
@@ -281,7 +288,7 @@ function rpg_skill_tersedia(array $u)
         if ($u['peran'] === 'assassin' && !empty($u['siap'])) {
             if ($sk['id'] === 's2') {
                 $sk = ['id' => 'strike', 'nama' => 'Serangan Bayangan', 'ikon' => '⚡', 'tgt' => 'musuh', 'cd' => 3, 'sisa' => 0, 'ok' => true,
-                    'desc' => 'Muncul dari bayangan dan serang 1 lawan dengan damage 275% attack!'];
+                    'desc' => 'Muncul dari bayangan dan serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL)!'];
             } else { $sk['ok'] = false; $sk['sisa'] = 0; $sk['kunci'] = true; }
         }
         $out[] = $sk;
@@ -689,7 +696,7 @@ function rpg_hitung_dalam($s)
             $t = $a['target'];
             if ($t !== $i && $hidupIdx($t)) { $tguard[$t] = $i; $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'satu', 't' => $t]; }
         } elseif ($u['peran'] === 'tank' && $sk === 's2') {
-            foreach ($units as $x) if ($x['tim'] === $u['tim'] && $x['hp'] > 0) $lindung[$x['i']] = RPG_LINDUNG_SEMUA;
+            foreach ($units as $x) if ($x['tim'] === $u['tim'] && $x['hp'] > 0) $lindung[$x['i']] = rpg_acak(RPG_BENTENG);   // acak untuk tiap target
             $st1[] = ['k' => 'perisai', 'u' => $i, 'm' => 'semua', 't' => -1];
         } elseif ($u['peran'] === 'fighter' && $sk === 's1') {
             $t = $a['target'];
@@ -709,10 +716,10 @@ function rpg_hitung_dalam($s)
         if (!$a['ok'] || $u['peran'] !== 'healer' || !in_array($a['skill'], ['s1', 's2'], true)) continue;
         $tl = $a['skill'] === 's1' ? [$a['target']] : array_values(array_map(function ($x) { return $x['i']; },
             array_filter($units, function ($x) use ($u) { return $x['tim'] === $u['tim'] && $x['hp'] > 0; })));
-        $amt = $a['skill'] === 's1' ? (int)$u['heal'] : (int)round($u['heal'] * RPG_HEAL_SEMUA);
         $h = [];
         foreach ($tl as $t) {
             if (!isset($units[$t]) || $units[$t]['hp'] <= 0) continue;
+            $amt = max(1, (int)round($u['heal'] * rpg_acak($a['skill'] === 's1' ? RPG_HEAL_1 : RPG_HEAL_SEMUA)));   // semua: acak tiap teman
             $baru = min($units[$t]['mx'], $units[$t]['hp'] + $amt);
             $h[] = ['u' => $t, 'n' => $baru - $units[$t]['hp'], 'hp' => $baru];
             $units[$t]['hp'] = $baru;
@@ -724,7 +731,7 @@ function rpg_hitung_dalam($s)
     // dan bila fighter dijaga tank, tank yang menerima bagian fighter) -> fighter menghindar (20%).
     $kurangi = function ($idx, $dmg) use (&$units) { $real = min($dmg, $units[$idx]['hp']); $units[$idx]['hp'] -= $real; return $real; };
     $infoTank = function ($gt, $dasar) use (&$units, $kurangi) {
-        $dt = max(1, (int)round($dasar * RPG_LINDUNG_1));
+        $dt = max(1, (int)round($dasar * rpg_acak(RPG_TANK_TERIMA)));
         $real = $kurangi($gt, $dt);
         $tk = ['u' => $gt, 'd' => $real, 'r' => $dt, 'hp' => $units[$gt]['hp']];
         if ($units[$gt]['hp'] <= 0) $tk['ko'] = 1;
@@ -740,11 +747,11 @@ function rpg_hitung_dalam($s)
         }
         $fg = $fguard[$ti] ?? null;
         if ($fg !== null && $fg !== $ti && $hidupIdx($fg)) {
-            $da = max(1, (int)round($raw * RPG_F_TEMAN));
+            $da = max(1, (int)round($raw * rpg_acak(RPG_F_TEMAN)));
             $ra = $kurangi($ti, $da);
             $row = ['u' => $ti, 'd' => $ra, 'r' => $da, 'hp' => $units[$ti]['hp']];
             if ($units[$ti]['hp'] <= 0) $row['ko'] = 1;
-            $bag = max(1, (int)round($raw * RPG_F_DIRI));
+            $bag = max(1, (int)round($raw * rpg_acak(RPG_F_DIRI)));
             $gt2 = $tguard[$fg] ?? null;
             if ($gt2 !== null && $gt2 !== $fg && $hidupIdx($gt2)) {
                 $row['fgd'] = ['u' => $fg, 'd' => 0, 'r' => $bag, 'hp' => $units[$fg]['hp'], 'tk' => $infoTank($gt2, $bag)];
@@ -755,7 +762,7 @@ function rpg_hitung_dalam($s)
             }
             return $row;
         }
-        if (!empty($fself[$ti])) $raw = max(1, (int)round($raw * RPG_F_MENGHINDAR));
+        if (!empty($fself[$ti])) $raw = max(1, (int)round($raw * rpg_acak(RPG_F_MENGHINDAR)));
         $real = $kurangi($ti, $raw);
         $row = ['u' => $ti, 'd' => $real, 'r' => $raw, 'hp' => $units[$ti]['hp']];
         if ($pr < 1) $row['pr'] = $pr;
@@ -775,38 +782,54 @@ function rpg_hitung_dalam($s)
         return max(1, (int)round($atkU['atk'] * $mult - $units[$ti]['def']));
     };
 
-    // 5. serangan (urutan diacak, damage dihitung berurutan)
+    // 5. serangan (urutan diacak, damage dihitung berurutan). Tiap serangan dilewatkan satu per satu melalui penjagaan
+    //    (tank/fighter), jadi bila lawan menyerang lebih dari sekali, tank menerima semua damage itu satu per satu.
     $atk = [];
     foreach ($A as $i => $a) {
         $u = $units[$i];
         if (!$a['ok']) continue;
         $sk = $a['skill'];
-        if ($sk === 'basic') $atk[] = [$i, 'basic', random_int((int)(RPG_BASIC_MIN * 1000), (int)(RPG_BASIC_MAX * 1000)) / 1000, 'satu'];
-        elseif ($u['peran'] === 'assassin' && $sk === 's1') $atk[] = [$i, 's1', RPG_ASSASSIN_1, 'satu'];
-        elseif ($sk === 'strike') $atk[] = [$i, 'strike', RPG_STRIKE, 'satu'];
-        elseif ($u['peran'] === 'mage' && $sk === 's1') $atk[] = [$i, 's1', RPG_AOE, 'semua'];
-        elseif ($u['peran'] === 'fighter' && $sk === 's2') $atk[] = [$i, 'f2', 0, 'kombo'];
+        if ($sk === 'basic') $atk[] = [$i, 'basic', 'satu'];
+        elseif ($u['peran'] === 'assassin' && $sk === 's1') $atk[] = [$i, 's1', 'satu'];
+        elseif ($sk === 'strike') $atk[] = [$i, 'strike', 'satu'];
+        elseif ($u['peran'] === 'mage' && $sk === 's1') $atk[] = [$i, 's1', 'semua'];
+        elseif ($u['peran'] === 'fighter' && $sk === 's2') $atk[] = [$i, 'f2', 'kombo'];
     }
     $atk = rpg_acak_urut($atk);
+    $beri = function (array $row, $pm, $peran, $sk) {      // catat persen damage; Critical khusus Assassin
+        $row['pm'] = (int)round($pm * 100);
+        if ($peran === 'assassin' && isset(RPG_CRIT[$sk]) && $pm > RPG_CRIT[$sk] && empty($row['bl']) && empty($row['sdh'])) $row['cr'] = 1;
+        return $row;
+    };
     foreach ($atk as $x) {
-        list($i, $sk, $mult, $mode) = $x;
+        list($i, $sk, $mode) = $x;
         $u = $units[$i];
         $t = [];
-        if ($mode === 'semua') {
+        if ($mode === 'semua') {            // Mage: tiap lawan mendapat persen acak sendiri
             foreach ($units as $y) {
                 if ($y['tim'] === $u['tim'] || $y['hp'] <= 0) continue;
-                $t[] = $tembak($y['i'], $hitung($u, $mult, $y['i']));
+                $m = rpg_acak(RPG_AOE);
+                $t[] = $beri($tembak($y['i'], $hitung($u, $m, $y['i'])), $m, $u['peran'], $sk);
             }
-        } elseif ($mode === 'kombo') {   // Fighter: 4 pukulan (4 x 20%) ke lawan pertama, lalu 1 pukulan 55% ke lawan lain
+        } elseif ($mode === 'kombo') {      // Fighter: 4 pukulan (tiap 15-30%) ke lawan pertama, lalu 1 pukulan 45-65% ke lawan lain
             $t1 = $A[$i]['target'];
-            $total = max(RPG_F_PUKUL_N, (int)round($u['atk'] * RPG_F_PUKUL * RPG_F_PUKUL_N - $units[$t1]['def']));   // selisih defend dihitung sekali
-            $t[] = $tembak($t1, $total, RPG_F_PUKUL_N);
+            $ms = []; for ($q = 0; $q < RPG_F_PUKUL_N; $q++) $ms[] = rpg_acak(RPG_F_PUKUL);
+            $sum = array_sum($ms);
+            $total = max(RPG_F_PUKUL_N, (int)round($u['atk'] * $sum - $units[$t1]['def']));   // selisih defend dihitung sekali untuk 4 pukulan
+            foreach ($ms as $q => $m) {
+                $row = $tembak($t1, max(1, (int)round($total * $m / $sum)));          // tiap pukulan dilewatkan sendiri-sendiri ke penjagaan
+                $row['hn'] = $q + 1; $row['pm'] = (int)round($m * 100);
+                $t[] = $row;
+            }
             $lain = array_values(array_map(function ($y) { return $y['i']; }, array_filter($units, function ($y) use ($u, $t1) { return $y['tim'] !== $u['tim'] && $y['hp'] > 0 && $y['i'] !== $t1; })));
             $t2 = $lain ? $lain[random_int(0, count($lain) - 1)] : $t1;
-            $t[] = $tembak($t2, $hitung($u, RPG_F_SUSUL, $t2), 1);
+            $m2 = rpg_acak(RPG_F_SUSUL);
+            $row = $tembak($t2, $hitung($u, $m2, $t2)); $row['hn'] = 5; $row['pm'] = (int)round($m2 * 100);
+            $t[] = $row;
         } else {
             $ti = $A[$i]['target'];
-            $t[] = $tembak($ti, $hitung($u, $mult, $ti));
+            $m = $sk === 'basic' ? rpg_acak(rpg_basic_rentang($u['peran'])) : ($sk === 's1' ? rpg_acak(RPG_ASSASSIN_1) : rpg_acak(RPG_STRIKE));
+            $t[] = $beri($tembak($ti, $hitung($u, $m, $ti)), $m, $u['peran'], $sk);
         }
         $st3[] = ['k' => 'serang', 'u' => $i, 's' => $sk, 'm' => $mode, 't' => $t];
     }

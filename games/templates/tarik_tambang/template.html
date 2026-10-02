@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>__GAME_TITLE__</title>
+<style>
+  :root{--bg1:#7a0c15;--bg2:#b3121f;--fg:#fff;--card:#fff;--ink:#1c2436;--acc:#d7192a}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{font-family:system-ui,"Segoe UI",Roboto,sans-serif;color:var(--fg);
+    background:linear-gradient(160deg,var(--bg2),var(--bg1));background-attachment:fixed;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;min-height:100vh}
+  body.tim2{--bg1:#e9edf5;--bg2:#ffffff;--fg:#1c2436}
+  body.tim2 .gk-header{color:#1c2436;background:rgba(215,25,42,.1)}
+  #app{width:100%;max-width:520px;margin:0 auto;padding:14px 16px 10px;flex:1;display:flex;flex-direction:column}
+  .bunting{height:26px;margin:0 -16px 10px;background:repeating-linear-gradient(90deg,#d7192a 0 26px,#fff 26px 52px);
+    clip-path:polygon(0 0,100% 0,100% 40%,97% 100%,94% 40%,91% 100%,88% 40%,85% 100%,82% 40%,79% 100%,76% 40%,73% 100%,70% 40%,67% 100%,64% 40%,61% 100%,58% 40%,55% 100%,52% 40%,49% 100%,46% 40%,43% 100%,40% 40%,37% 100%,34% 40%,31% 100%,28% 40%,25% 100%,22% 40%,19% 100%,16% 40%,13% 100%,10% 40%,7% 100%,4% 40%,1% 100%,0 40%)}
+  .panel{background:var(--card);color:var(--ink);border-radius:22px;padding:22px 20px;box-shadow:0 12px 30px rgba(0,0,0,.22);text-align:center;animation:pop .25s ease-out}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:none;opacity:1}}
+  .big{font-size:3.4rem;line-height:1.1}
+  h2{margin:.3em 0;font-size:1.45rem}
+  p{margin:.4em 0}
+  .muted{opacity:.75;font-size:.92rem}
+  .badge{display:inline-block;padding:8px 20px;border-radius:999px;font-weight:900;letter-spacing:.06em;margin:8px 0;font-size:1.05rem}
+  .badge.t1{background:#d7192a;color:#fff}
+  .badge.t2{background:#fff;color:#d7192a;border:3px solid #d7192a}
+  .badge.t0{background:#eef1f7;color:#667085}
+  .chip{display:inline-block;background:#eef1f7;color:#1c2436;border-radius:999px;padding:4px 12px;margin:3px;font-size:.9rem;font-weight:700}
+  .top{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin-bottom:8px}
+  .top .pill{background:rgba(255,255,255,.22);padding:4px 12px;border-radius:999px}
+  body.tim2 .top .pill{background:rgba(215,25,42,.12)}
+  .bar{height:12px;background:rgba(255,255,255,.25);border-radius:99px;overflow:hidden;margin-bottom:12px}
+  body.tim2 .bar{background:rgba(0,0,0,.1)}
+  .bar i{display:block;height:100%;width:100%;background:#f4b52c;transition:width .25s linear}
+  .bar i.low{background:#ff5252}
+  .q{background:var(--card);color:var(--ink);border-radius:20px;padding:20px 18px;font-size:1.28rem;font-weight:800;line-height:1.35;text-align:center;box-shadow:0 8px 20px rgba(0,0,0,.18);margin-bottom:14px;white-space:pre-wrap;word-break:break-word}
+  .opsi{display:grid;gap:10px}
+  .op{display:flex;align-items:center;gap:12px;border:0;border-radius:16px;padding:16px 14px;font:inherit;font-size:1.1rem;font-weight:800;color:#fff;text-align:left;cursor:pointer;box-shadow:0 5px 0 rgba(0,0,0,.25);min-height:60px}
+  .op:active{transform:translateY(4px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+  .op b{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.28);flex:none}
+  .op:nth-child(1){background:#2c56c9}.op:nth-child(2){background:#1f9d6b}.op:nth-child(3){background:#e08a00}.op:nth-child(4){background:#8a3fc7}
+  .op[disabled]{opacity:.55;box-shadow:none;transform:none}
+  .op.pilih{outline:4px solid #fff;opacity:1}
+  .isi{width:100%;font:inherit;font-size:1.3rem;font-weight:700;padding:16px;border-radius:16px;border:3px solid rgba(0,0,0,.15);text-align:center;margin-bottom:10px;color:#1c2436;background:#fff}
+  .kirim{width:100%;border:0;border-radius:16px;padding:16px;font:inherit;font-size:1.15rem;font-weight:900;background:#f4b52c;color:#3a2a00;box-shadow:0 5px 0 #b98410;cursor:pointer}
+  .kirim:active{transform:translateY(4px);box-shadow:0 1px 0 #b98410}
+  .kirim[disabled]{opacity:.6}
+  .tunggu-anim{display:inline-block;animation:goyang 1.2s ease-in-out infinite}
+  @keyframes goyang{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+  .selesai-menang .big{animation:lompat .8s ease-in-out infinite}
+  @keyframes lompat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+  .kredit{padding:10px 12px 14px;text-align:center;font-size:.72rem;opacity:.65}
+  .info{margin-top:14px;font-size:.9rem;opacity:.85;text-align:center}
+</style>
+</head>
+<body>
+<div id="gk-header"></div>
+<main id="app"></main>
+<div class="kredit">Dibuat oleh Subrata Pratama, S.Pd. - SMP Kartini 2 Batam</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, esc = GK.esc, app = document.getElementById('app');
+  var API = GK.base + 'api_live.php';
+  var KEY = 'tt_' + D.id;
+  var S = { sesi: 0, p: '', nama: '', key: '', sisa: null, t0: 0, pollT: 0, mode: 'cari', final: false, terkirim: false };
+
+  function api(a, q, body) {
+    var u = API + '?a=' + a + (q ? '&' + q : '');
+    var opt = body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : { cache: 'no-store' };
+    return fetch(u, opt).then(function (r) { return r.json(); });
+  }
+  function simpan() { try { localStorage.setItem(KEY, JSON.stringify({ sesi: S.sesi, p: S.p, nama: S.nama })); } catch (e) {} }
+  function muat() { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
+  function hapus() { try { localStorage.removeItem(KEY); } catch (e) {} S.p = ''; S.sesi = 0; S.final = false; S.key = ''; }
+  function tema(t) { document.body.className = t === 2 ? 'tim2' : ''; }
+  function badge(t) {
+    return t === 1 ? '<span class="badge t1">🔴 TIM MERAH</span>' : t === 2 ? '<span class="badge t2">⚪ TIM PUTIH</span>' : '<span class="badge t0">Belum dapat tim</span>';
+  }
+  function tampil(html, kelas) { app.innerHTML = '<div class="bunting"></div>' + html; S.terkirim = false; }
+  function panel(html, kelas) { tampil('<div class="panel ' + (kelas || '') + '">' + html + '</div>'); }
+
+  // ---------- mencari sesi ----------
+  function cari() {
+    S.mode = 'cari';
+    api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+      if (S.mode !== 'cari') return;
+      if (!j.ada || !j.aktif) { panel('<div class="big">🔒</div><h2>Game ditutup</h2><p>Guru belum membuka game ini.</p>'); return; }
+      if (j.sesi && j.sesi.status === 'lobi') { masuk(); return; }
+      if (j.sesi) panel('<div class="big">🚧</div><h2>Game sedang berjalan</h2><p>Kamu belum bisa masuk. Tunggu sesi berikutnya ya, halaman ini akan mengecek otomatis.</p>');
+      else panel('<div class="big tunggu-anim">🪢</div><h2>Menunggu guru…</h2><p>Guru belum membuka lobi. Jangan tutup halaman ini.</p>');
+    }).catch(function () {
+      if (S.mode === 'cari') panel('<div class="big">📶</div><h2>Tidak ada koneksi</h2><p>Mencoba lagi…</p>');
+    }).then(function () { if (S.mode === 'cari') setTimeout(cari, 2500); });
+  }
+
+  function masuk() {
+    if (S.mode === 'nama') return;
+    S.mode = 'nama';
+    tema(0);
+    GK.askName(function (nama) {
+      api('gabung', '', { id: D.id, token: D.token, nama: nama, ptoken: '' }).then(function (j) {
+        if (j.ok) { S.sesi = j.sesi; S.p = j.p; S.nama = j.nama; simpan(); S.final = false; S.key = ''; S.mode = 'main'; poll(); return; }
+        GK.toast(j.pesan || 'Gagal masuk', '#d64545', 3200);
+        if (j.kode === 'nama') { S.mode = 'cari'; masuk(); }      // nama dipakai: tanya lagi
+        else { S.mode = 'cari'; cari(); }
+      }).catch(function () { GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); S.mode = 'cari'; cari(); });
+    }, 'Masuk lobi');
+  }
+
+  // ---------- polling keadaan ----------
+  function poll() {
+    clearTimeout(S.pollT);
+    if (S.mode !== 'main') return;
+    var p;
+    if (S.final) {
+      p = api('cek', 'id=' + encodeURIComponent(D.id)).then(function (j) {
+        if (j.sesi && j.sesi.id !== S.sesi && j.sesi.status === 'lobi') { hapus(); S.mode = 'cari'; masuk(); return 'stop'; }
+      });
+    } else {
+      p = api('state', 'sesi=' + S.sesi + '&p=' + encodeURIComponent(S.p)).then(function (j) {
+        if (!j.ok) { if (j.kode === 'keluar') { hapus(); S.mode = 'cari'; cari(); return 'stop'; } return; }
+        terapkan(j);
+      });
+    }
+    p.catch(function () {}).then(function (h) { if (h !== 'stop' && S.mode === 'main') S.pollT = setTimeout(poll, S.final ? 3000 : 1000); });
+  }
+
+  function terapkan(j) {
+    tema(j.tim);
+    S.sisa = j.sisa; S.t0 = Date.now();
+    if (j.waktu > 0) S.waktuTotal = j.waktu * 1000;
+    var key;
+    if (j.st === 'lobi') key = 'lobi|' + j.tim + '|' + j.jml.join(',') + '|' + (j.numpang || '');
+    else if (j.st === 'soal') key = 'soal|' + j.ronde + '|' + (j.sudah ? 1 : 0) + '|' + (j.numpang || '');
+    else if (j.st === 'jeda') key = 'jeda|' + j.ronde + '|' + (j.sudah ? 1 : 0);
+    else key = j.st + '|' + j.ronde;
+    if (key === S.key) return;
+    S.key = key;
+    if (j.st === 'lobi') return lobi(j);
+    if (j.st === 'soal') return soal(j);
+    if (j.st === 'hasil') return panel('<div class="big tunggu-anim">👀</div><h2>Lihat layar guru!</h2><p>Tali sedang ditarik…</p>' + badge(j.tim));
+    if (j.st === 'jeda') return panel('<div class="big">⏸️</div><h2>Game dijeda</h2><p>Guru sedang menunggu. Jangan tutup halaman ini.</p>' + badge(j.tim));
+    if (j.st === 'selesai') return selesai(j);
+  }
+
+  function lobi(j) {
+    var h = '<div class="big tunggu-anim">🪢</div><h2>Kamu sudah masuk!</h2><p><b>' + esc(j.nama) + '</b></p>' + badge(j.tim);
+    if (j.numpang) h = '<div class="big">🤝</div><h2>Bermain bersama</h2><p>Kamu satu HP dengan <b>' + esc(j.numpang) + '</b>. Gunakan HP <b>' + esc(j.numpang) + '</b> untuk menjawab.</p>' + badge(j.tim);
+    h += '<p class="muted">HP terdaftar: Merah ' + j.jml[1] + ' · Putih ' + j.jml[2] + (j.jml[0] ? ' · belum bertim ' + j.jml[0] : '') + '</p>';
+    h += '<p class="muted">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p>';
+    panel(h);
+  }
+
+  function soal(j) {
+    if (j.numpang) return panel('<div class="big">🤝</div><h2>Bermain bersama</h2><p>Jawab lewat HP <b>' + esc(j.numpang) + '</b>. Lihat layar guru!</p>' + badge(j.tim));
+    var judul = j.extra ? '⚡ Tarikan penentu' : j.label;
+    var top = '<div class="top"><span class="pill">' + judul + '</span><span class="pill">' + (j.tim === 1 ? '🔴 Merah' : '⚪ Putih') + '</span></div>'
+      + (j.waktu > 0 ? '<div class="bar"><i id="bar"></i></div>' : '');
+    if (j.sudah || !j.soal) {
+      tampil(top + '<div class="panel"><div class="big">📨</div><h2>Jawaban terkirim</h2><p>Tunggu teman-temanmu selesai menjawab. Lihat layar guru.</p></div>');
+      return;
+    }
+    var q = j.soal, h = top + '<div class="q">' + esc(q.q) + '</div>';
+    if (q.t === 'pg') {
+      h += '<div class="opsi">' + q.o.map(function (t, i) { return '<button class="op" data-i="' + i + '"><b>' + 'ABCD'.charAt(i) + '</b><span>' + esc(t) + '</span></button>'; }).join('') + '</div>';
+    } else {
+      h += '<input class="isi" id="isi" maxlength="100" autocomplete="off" autocapitalize="none" placeholder="Ketik jawabanmu"><button class="kirim" id="kirim">Kirim jawaban</button>';
+    }
+    tampil(h);
+    var ronde = j.ronde;
+    function kirim(v, el) {
+      if (S.terkirim) return; S.terkirim = true;
+      app.querySelectorAll('button,input').forEach(function (b) { b.disabled = true; });
+      if (el) el.classList.add('pilih');
+      GK.beep(520, .08);
+      api('jawab', '', { sesi: S.sesi, p: S.p, ronde: ronde, jawab: v }).then(function (r) {
+        if (r.ok) { S.key = 'soal|' + ronde + '|1|'; tampil(top + '<div class="panel"><div class="big">📨</div><h2>Jawaban terkirim</h2><p>Tunggu teman-temanmu selesai menjawab. Lihat layar guru.</p></div>'); }
+        else { S.key = ''; if (r.kode !== 'tutup' && r.kode !== 'ronde') GK.toast(r.pesan || 'Gagal mengirim', '#d64545', 2200); }
+      }).catch(function () { S.terkirim = false; S.key = ''; GK.toast('Koneksi bermasalah, coba lagi', '#d64545', 2200); });
+    }
+    if (q.t === 'pg') app.querySelectorAll('.op').forEach(function (b) { b.onclick = function () { kirim(+b.dataset.i, b); }; });
+    else {
+      var inp = document.getElementById('isi'), k = document.getElementById('kirim');
+      k.onclick = function () { var v = inp.value.trim(); if (!v) { inp.focus(); return; } kirim(v); };
+      inp.onkeydown = function (e) { if (e.key === 'Enter') k.click(); };
+      setTimeout(function () { inp.focus(); }, 80);
+    }
+  }
+
+  function selesai(j) {
+    S.final = true;
+    if (j.pemenang === 0) { panel('<div class="big">🚪</div><h2>Sesi ditutup guru</h2><p class="muted">Menunggu sesi berikutnya. Halaman ini akan mengecek otomatis.</p>'); return; }
+    var menang = j.pemenang === j.tim, seri = j.pemenang === 3;
+    var emoji = seri ? '🤝' : menang ? '🏆' : '💪';
+    var judul = seri ? 'Pertandingan seri!' : menang ? 'Timmu MENANG! Merdeka!' : 'Belum beruntung, tetap hebat!';
+    var h = '<div class="big">' + emoji + '</div><h2>' + judul + '</h2>' + badge(j.tim)
+      + '<p class="muted">Menunggu sesi berikutnya dari guru. Halaman ini akan mengecek otomatis.</p>';
+    panel(h, menang ? 'selesai-menang' : '');
+  }
+
+  // ---------- bilah waktu ----------
+  setInterval(function () {
+    var bar = document.getElementById('bar');
+    if (!bar || S.sisa == null || !S.waktuTotal || S.key.indexOf('soal|') !== 0) return;
+    var sisa = Math.max(0, S.sisa - (Date.now() - S.t0));
+    bar.style.width = Math.min(100, sisa / S.waktuTotal * 100) + '%';
+    bar.className = sisa < 5000 ? 'low' : '';
+  }, 200);
+
+  GK.start({
+    needName: false,
+    onStart: function () {
+      var sv = muat();
+      if (sv && sv.p) { S.sesi = sv.sesi; S.p = sv.p; S.nama = sv.nama; S.mode = 'main'; poll(); }
+      else cari();
+    }
+  });
+})();
+</script>
+</body>
+</html>

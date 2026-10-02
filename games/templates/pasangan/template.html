@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>__GAME_TITLE__</title>
+<style>
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;background:#1e4d5c;min-height:100vh;color:#fff}
+.wrap{max-width:900px;margin:0 auto;padding:14px}
+.bar{display:flex;justify-content:space-between;font-weight:800;font-size:1.05rem;margin-bottom:6px;gap:10px;flex-wrap:wrap}
+.petunjuk{text-align:center;opacity:.8;margin:6px 0 14px;font-size:.95rem}
+.papan{display:grid;grid-template-columns:1fr 1fr;gap:12px 28px;position:relative}
+.kolom{display:flex;flex-direction:column;gap:10px}
+.kartu{border:0;border-radius:16px;padding:14px 12px;min-height:58px;font-size:clamp(1rem,2.6vw,1.25rem);font-weight:800;cursor:pointer;
+  color:#1c2436;text-align:center;line-height:1.25;word-break:break-word;transition:transform .15s,opacity .35s,background .2s;box-shadow:0 5px 0 rgba(0,0,0,.25)}
+.kiri .kartu{background:#dbe8ff;border-left:8px solid #2c56c9}
+.kanan .kartu{background:#fff1d6;border-right:8px solid #e0a01a}
+.kartu:hover:not(:disabled){transform:translateY(-2px)}
+.kartu.pilih{outline:4px solid #fff;transform:scale(1.03);background:#fff}
+.kartu.cocok{background:#b8f0d2;border-color:#1f9d6b;opacity:.55;cursor:default;box-shadow:none;transform:none}
+.kartu.keliru{background:#ffc9c9;animation:geleng .35s}
+@keyframes geleng{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.label{text-align:center;font-weight:800;opacity:.75;font-size:.85rem}
+@media(max-width:520px){.papan{gap:10px 12px}.kartu{padding:12px 8px;min-height:52px}}
+@media (prefers-reduced-motion:reduce){.kartu{transition:none}.kartu.keliru{animation:none}}
+</style></head><body>
+<div id="gk-header"></div>
+<div class="wrap">
+  <div class="bar"><span id="ronde"></span><span id="time"></span><span id="sk"></span></div>
+  <p class="petunjuk">Pilih satu kartu di kiri, lalu kartu pasangannya di kanan.</p>
+  <div class="papan">
+    <div class="label">Soal</div><div class="label">Pasangan</div>
+    <div class="kolom kiri" id="kiri"></div>
+    <div class="kolom kanan" id="kanan"></div>
+  </div>
+</div>
+<script>window.GAME_DATA = /*__GAME_DATA__*/;</script>
+<script src="../../../assets/js/game-common.js"></script>
+<script>
+(function () {
+  var D = GK.data, P = D.pengaturan || {};
+  var per = Math.max(2, Math.min(10, +P.per_ronde || 6));
+  var semua = [], ronde = [], nomorRonde = 0, jumlahRonde = 0, skor = 0, nama = '', t0 = 0, tmr = null;
+  var pilihKiri = null, pilihKanan = null, sisaRonde = 0, selesaiFlag = false;
+  function $(id) { return document.getElementById(id); }
+  function norm(s) { return String(s).trim().toLowerCase().replace(/\s+/g, ' '); }
+
+  function mulai(n) {
+    nama = n; skor = 0; selesaiFlag = false; t0 = Date.now();
+    semua = (P.acak_soal ? GK.shuffle(D.soal) : D.soal.slice()).map(function (s) { return { kiri: s.q, kanan: s.o[0], salah: false }; });
+    jumlahRonde = Math.ceil(semua.length / per);
+    // bagi rata agar ronde terakhir tidak terlalu sedikit
+    var ukuran = Math.ceil(semua.length / jumlahRonde);
+    ronde = [];
+    for (var i = 0; i < semua.length; i += ukuran) ronde.push(semua.slice(i, i + ukuran));
+    nomorRonde = 0;
+    clearInterval(tmr);
+    var batas = +P.waktu_total || 0;
+    if (batas) {
+      tmr = setInterval(function () {
+        var sisa = batas - Math.floor((Date.now() - t0) / 1000);
+        $('time').textContent = '⏱ ' + GK.fmt(sisa);
+        if (sisa <= 0) { clearInterval(tmr); GK.toast('Waktu habis ⏰', '#d64545', 1500); setTimeout(selesai, 800); }
+      }, 500);
+    } else {
+      tmr = setInterval(function () { $('time').textContent = '⏱ ' + GK.fmt((Date.now() - t0) / 1000); }, 500);
+    }
+    tampilRonde();
+  }
+  function kartu(teks, sisi, item) {
+    var b = document.createElement('button');
+    b.className = 'kartu'; b.textContent = teks; b.dataset.sisi = sisi;
+    b._item = item;
+    b.onclick = function () { klik(b); };
+    return b;
+  }
+  function tampilRonde() {
+    if (nomorRonde >= ronde.length) return selesai();
+    var r = ronde[nomorRonde];
+    $('ronde').textContent = ronde.length > 1 ? 'Ronde ' + (nomorRonde + 1) + ' / ' + ronde.length : r.length + ' pasangan';
+    $('sk').textContent = '⭐ ' + skor;
+    $('kiri').innerHTML = ''; $('kanan').innerHTML = '';
+    GK.shuffle(r).forEach(function (it) { $('kiri').appendChild(kartu(it.kiri, 'kiri', it)); });
+    GK.shuffle(r).forEach(function (it) { $('kanan').appendChild(kartu(it.kanan, 'kanan', it)); });
+    sisaRonde = r.length; pilihKiri = pilihKanan = null;
+  }
+  function klik(b) {
+    if (selesaiFlag || b.disabled) return;
+    GK.beep(700, .04, 'triangle');
+    if (b.dataset.sisi === 'kiri') { if (pilihKiri) pilihKiri.classList.remove('pilih'); pilihKiri = pilihKiri === b ? null : b; }
+    else { if (pilihKanan) pilihKanan.classList.remove('pilih'); pilihKanan = pilihKanan === b ? null : b; }
+    if (pilihKiri) pilihKiri.classList.add('pilih');
+    if (pilihKanan) pilihKanan.classList.add('pilih');
+    if (pilihKiri && pilihKanan) periksa();
+  }
+  function periksa() {
+    var a = pilihKiri, b = pilihKanan;
+    pilihKiri = pilihKanan = null;
+    a.classList.remove('pilih'); b.classList.remove('pilih');
+    // cocok jika teks pasangan sama (mengatasi jawaban kembar)
+    if (norm(a._item.kanan) === norm(b.textContent)) {
+      if (!a._item.salah) skor++;
+      if (b._item !== a._item) { // tukar pemilik kartu kanan agar kartu kembar tetap sesuai
+        var lain = b._item; b._item = a._item;
+        Array.prototype.forEach.call($('kanan').children, function (k) { if (k !== b && k._item === a._item && !k.disabled) k._item = lain; });
+      }
+      a.disabled = b.disabled = true;
+      a.classList.add('cocok'); b.classList.add('cocok');
+      GK.sfxBenar(); $('sk').textContent = '⭐ ' + skor;
+      if (--sisaRonde === 0) { nomorRonde++; setTimeout(tampilRonde, 700); }
+    } else {
+      a._item.salah = true;
+      GK.sfxSalah();
+      [a, b].forEach(function (k) { k.classList.remove('keliru'); void k.offsetWidth; k.classList.add('keliru'); });
+      setTimeout(function () { a.classList.remove('keliru'); b.classList.remove('keliru'); }, 450);
+    }
+  }
+  function selesai() {
+    if (selesaiFlag) return;
+    selesaiFlag = true; clearInterval(tmr);
+    GK.result({ nama: nama, skor: skor, maks: semua.length, durasi: Math.round((Date.now() - t0) / 1000), onReplay: function () { mulai(nama); } });
+  }
+  GK.start({ needName: true, onStart: mulai });
+})();
+</script>
+</body></html>

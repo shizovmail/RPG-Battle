@@ -47,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$u['id'], $kode, $judul, new_slug($judul), $kelasLbl, $json, bin2hex(random_bytes(8))]);
             $gid = (int)db()->lastInsertId();
         }
+        simpan_visibilitas($gid, $u['id']);
         try {
             generate_game($gid);
             flash($game ? 'Perubahan disimpan. Link & QR tetap sama. Sesi yang sedang berjalan tidak terpengaruh.' : 'Game RPG Battle berhasil dibuat! Buka Panel wasit untuk mengatur pemain dan memulai pertandingan.');
@@ -82,6 +83,8 @@ page_header(($game ? 'Edit ' : 'Buat ') . $m['nama'], 'guru/');
     </div>
   </section>
 
+  <?php bank_vis_card($game); ?>
+
   <section class="card">
     <h2>1. Tipe soal</h2>
     <p class="small muted">Centang satu tipe, atau keduanya untuk soal campuran (nanti tiap soal bisa dipilih tipenya).</p>
@@ -92,6 +95,7 @@ page_header(($game ? 'Edit ' : 'Buat ') . $m['nama'], 'guru/');
   </section>
 
   <section class="card">
+    <?php bank_panel($kode); ?>
     <div class="sec-head"><h2>2. Bank soal <span class="muted" id="jml-soal"></span></h2>
       <details class="menu"><summary class="btn small">Tempel banyak soal sekaligus</summary>
         <div class="menu-box wide-box">
@@ -148,7 +152,7 @@ Bilangan prima terkecil | 2 | dua</pre>
 
   <section class="card">
     <div class="sec-head"><h2>4. Stat tiap peran</h2><button type="button" class="btn small" id="stat-reset">Kembalikan stat bawaan</button></div>
-    <p class="small muted">HP = darah, Attack = kekuatan serang, Defend = pertahanan, Heal = jumlah pemulihan (hanya dipakai Healer). Damage = <b>(Attack × pengali skill) − Defend lawan</b> (minimal 1).
+    <p class="small muted">HP = darah, Attack = kekuatan serang, Defend = pertahanan, Heal = jumlah pemulihan (hanya dipakai Healer). Damage = <b>(Attack × persen skill yang diacak) − Defend lawan</b> (minimal 1).
       Nilai bawaan sudah diseimbangkan lewat simulasi ribuan pertandingan 4 vs 4 maupun 5 vs 5 (lihat README): kedua tim menang ±50%, Assassin damage terbesar tetapi paling rapuh, Mage menyerang area, Fighter petarung tangguh, Healer dan Tank hampir tidak melukai tetapi menopang tim.</p>
     <div style="overflow:auto"><table class="stat-tabel">
       <tr><th>Peran</th><th>HP</th><th>Attack</th><th>Defend</th><th>Heal</th></tr>
@@ -162,12 +166,13 @@ Bilangan prima terkecil | 2 | dua</pre>
     </table></div>
     <details style="margin-top:12px"><summary class="small"><b>Daftar skill & pengali damage</b></summary>
       <ul class="small">
-        <li><b>Semua peran</b> – Serangan Dasar: 10%–20% Attack (acak tiap giliran) ke 1 lawan, tanpa cooldown.</li>
-        <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 <u>teman</u>, bukan diri sendiri; teman itu 0 damage, tank menerima 10% damage tersebut; tanpa cooldown); Benteng Tim (semua anggota, damage masuk 20%, cooldown 2).</li>
-        <li><b>Fighter</b> (opsional) – Lompat Pelindung (melompat ke depan 1 teman: teman menerima 20%, fighter 35%; bila dipilih untuk diri sendiri, fighter menghindar dan menerima 20%; bila tank menjaga fighter, tank yang menerima bagian fighter; cooldown 2); Rentetan Pukulan (lompat ke lawan pertama: 4 pukulan × 20% Attack, lalu lawan lain acak: 1 pukulan 55% Attack, lalu salto kembali; cooldown 2).</li>
-        <li><b>Healer</b> – Penyembuhan (1 anggota = Heal penuh, tanpa cooldown); Hujan Cahaya (semua anggota = 55% Heal, cooldown 3).</li>
-        <li><b>Assassin</b> – Tusukan Mematikan (1 lawan, 100% Attack, cooldown 2); Bayangan (tak bisa diserang giliran itu, lalu giliran berikutnya Serangan Bayangan 275% Attack jika benar lagi, cooldown 3).</li>
-        <li><b>Mage</b> – Hujan Meteor / Badai Es (semua lawan, 100% Attack, cooldown 3); Kutukan (1 lawan, giliran berikutnya 75% gagal walau benar, tersembunyi dari lawan, cooldown 2).</li>
+        <li><b>Serangan Dasar</b> (tanpa cooldown, selalu ke 1 lawan, % attack diacak tiap serangan): Tank 10–20% · Healer 5–25% · Mage 10–30% · Fighter 15–35% · Assassin 20–50% (di atas 40% = <span style="color:#d32f2f"><b>CRITICAL</b></span>).</li>
+        <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 <u>teman</u>, bukan diri sendiri; teman itu 0 damage, tank menerima 5–15% tiap serangan yang tertuju ke temannya; tanpa cooldown); Benteng Tim (semua anggota, damage masuk 15–25%, acak per anggota, cooldown 2).</li>
+        <li><b>Fighter</b> (opsional) – Lompat Pelindung (melompat ke depan 1 teman: teman menerima 5–25%, fighter 10–40%; untuk diri sendiri fighter menghindar dan menerima 5–25%; bila tank menjaga, tank yang menerima; cooldown 2); Rentetan Pukulan (4 pukulan × 15–30% Attack ke lawan pertama, lalu 1 pukulan 45–65% Attack ke lawan lain acak, lalu salto kembali; cooldown 2).</li>
+        <li><b>Healer</b> – Penyembuhan (1 anggota = 85–115% Heal, tanpa cooldown); Hujan Cahaya (semua anggota = 45–70% Heal, acak per teman, cooldown 3).</li>
+        <li><b>Assassin</b> – Tusukan Mematikan (1 lawan, 90–140% Attack, di atas 115% = CRITICAL, cooldown 2); Bayangan (tak bisa diserang giliran itu, lalu giliran berikutnya Serangan Bayangan 230–280% Attack jika benar lagi, di atas 250% = CRITICAL, cooldown 3).</li>
+        <li><b>Mage</b> – Hujan Meteor / Badai Es (semua lawan, 65–100% Attack, acak per lawan, cooldown 2); Kutukan (1 lawan, giliran berikutnya 75% gagal walau benar, tersembunyi dari lawan, cooldown 2).</li>
+        <li>Bila lawan menyerang lebih dari sekali ke sasaran yang dijaga, tank/fighter penjaga menerima tiap serangan itu satu per satu.</li>
         <li>Skill yang gagal (jawaban salah / waktu habis) tetap memakai cooldown. Tank &amp; Healer memilih sekutu untuk skill utamanya; Assassin &amp; Mage memilih lawan.</li>
       </ul></details>
   </section>
@@ -328,6 +333,18 @@ Bilangan prima terkecil | 2 | dua</pre>
     render();
     alert((n ? n + ' soal ditambahkan.' : 'Tidak ada soal yang terbaca. Periksa formatnya.') + (ditolak ? ' ' + ditolak + ' blok dilewati karena tipe soalnya belum dicentang.' : ''));
     if (n) { document.getElementById('impor-teks').value = ''; this.closest('details').removeAttribute('open'); }
+  };
+  // dipakai jendela "Ambil dari Bank Soal": soal masuk ke daftar yang sedang terbuka (kategori aktif bila model kategori)
+  window.RGBankTujuan = function(){ return MODE === 'kategori' ? 'Soal akan masuk ke kategori ' + PERAN[KATAKTIF] + '.' : ''; };
+  window.RGBankAdd = function(items){
+    var kosong = ARR().length === 1 && !(ARR()[0].q || '').trim();
+    items.forEach(function(it){
+      if (it.t === 'isian') cbIs.checked = true; else cbPg.checked = true;
+      tambah({t: it.t, q: it.q, o: it.o || [], b: it.b || 0, j: it.j || '', w: it.w || 15});
+    });
+    if (kosong) ARR().shift();
+    render();
+    return items.length;
   };
   document.getElementById('stat-reset').onclick = function(){
     document.querySelectorAll('[data-bawaan]').forEach(function(i){ i.value = i.dataset.bawaan; });
