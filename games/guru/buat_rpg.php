@@ -48,9 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $gid = (int)db()->lastInsertId();
         }
         simpan_visibilitas($gid, $u['id']);
+        if ($game) { rpg_db(); db_q("UPDATE rpg_sesi SET cfg=? WHERE game_id=? AND status='lobi'", [json_encode($cfg), $gid]); }   // sesi yang masih di lobi ikut memakai pengaturan baru (mis. Fighter)
         try {
             generate_game($gid);
-            flash($game ? 'Perubahan disimpan. Link & QR tetap sama. Sesi yang sedang berjalan tidak terpengaruh.' : 'Game RPG Battle berhasil dibuat! Buka Panel wasit untuk mengatur pemain dan memulai pertandingan.');
+            flash($game ? 'Perubahan disimpan. Link & QR tetap sama. Sesi yang masih di lobi ikut memakai pengaturan baru; sesi yang sudah berjalan tidak terpengaruh.' : 'Game RPG Battle berhasil dibuat! Buka Panel wasit untuk mengatur pemain dan memulai pertandingan.');
             redirect('guru/hasil.php?id=' . $gid);
         } catch (Exception $e) {
             $errors[] = 'Game tersimpan, tetapi file gagal dibuat: ' . $e->getMessage();

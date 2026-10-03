@@ -156,7 +156,7 @@ Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per katego
 ### Petunjuk permainan (cetak dan lobi HP murid)
 
 * **Cetak**: tombol **🖨️ Cetak petunjuk** di Panel wasit (`guru/rpg_cetak.php`) membuka halaman siap cetak berisi petunjuk permainan, stat awal tiap karakter, dan penjelasan semua skill (termasuk angka heal dan damage maksimum Bayangan).
-  Angkanya **mengikuti stat yang sedang dipakai**, jadi bila guru mengubah stat (formulir atau Panel wasit lobi) hasil cetaknya ikut berubah.
+  Fighter **hanya dimunculkan bila karakter Fighter diikutkan** (dicentang di formulir atau Panel wasit); bila diaktifkan, stat dan dua skill Fighter ikut tercetak dan tampil di lobi HP murid, bila tidak maka tidak ada sama sekali (termasuk di teks umum). Menyimpan formulir game saat sesi masih di lobi ikut memperbarui pengaturan sesi itu (mis. Fighter). Angkanya **mengikuti stat yang sedang dipakai**, jadi bila guru mengubah stat (formulir atau Panel wasit lobi) hasil cetaknya ikut berubah.
 * **HP murid**: selama menunggu di lobi, murid melihat tiga bagian yang bisa dibuka-tutup: *Petunjuk permainan*, *Stat awal tiap karakter*, *Skill tiap karakter* (ikut berubah bila guru mengubah stat). Perlu **simpan ulang** game agar halaman murid terbarui.
 
 ### Pilih peran mandiri & koneksi otomatis

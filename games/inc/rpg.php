@@ -314,10 +314,10 @@ function rpg_petunjuk(array $cfg)
         'Skill hanya berhasil bila soalnya dijawab BENAR. Jawaban salah atau waktu habis = skill gagal. Skill yang gagal tetap memakai cooldown.',
         'Cooldown "2" berarti skill tidak bisa dipakai 2 giliran berikutnya. Serangan Dasar tidak punya cooldown.',
         'Damage = (Attack × persen skill yang diacak) − Defend lawan, minimal 1. Heal Healer dihitung dari Attack Healer. Karakter dengan HP 0 pingsan dan tidak ikut giliran berikutnya.',
-        'Urutan penghitungan dalam satu giliran: kutukan dan skill gagal → pelindung/buff (Benteng, Pasang Badan, Lompat Pelindung, Bayangan) → pemulihan (heal) → semua serangan terakhir. Karena serempak, dua karakter yang sama-sama sekarat bisa saling menjatuhkan.',
+        'Urutan penghitungan dalam satu giliran: kutukan dan skill gagal → pelindung/buff (Benteng, Pasang Badan, ' . ($fighter ? 'Lompat Pelindung, ' : '') . 'Bayangan) → pemulihan (heal) → semua serangan terakhir. Karena serempak, dua karakter yang sama-sama sekarat bisa saling menjatuhkan.',
         'Kutukan Mage: langsung aktif pada giliran itu dan membuat skill targetnya gagal walau jawabannya benar (target tidak diberi tahu). Mage yang dikutuk mage lawan kutukannya gagal; dua mage saling mengutuk = keduanya terkutuk.',
         'Pemenang: tim yang menumbangkan semua karakter lawan. Bila soal habis (setelah pengulangan ' . (int)$cfg['ulang'] . ' kali): tim dengan karakter hidup lebih banyak, bila sama total HP lebih besar.',
-        'Kerja sama tim: Tank dan Fighter melindungi teman yang HP-nya tipis, Healer menyembuhkan sebelum HP habis, Assassin dan Mage fokus menjatuhkan lawan yang lemah.',
+        'Kerja sama tim: ' . ($fighter ? 'Tank dan Fighter' : 'Tank') . ' melindungi teman yang HP-nya tipis, Healer menyembuhkan sebelum HP habis, Assassin dan Mage fokus menjatuhkan lawan yang lemah.',
     ];
     return $out;
 }
