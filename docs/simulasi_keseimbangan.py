@@ -19,14 +19,13 @@ CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s
       'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
 BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
 STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan heal Healer = Attack-nya)
-    'tank': dict(hp=340, atk=24, df=18),
-    'fighter': dict(hp=240, atk=52, df=12),
-    'assassin': dict(hp=135, atk=90, df=5),
-    'mage': dict(hp=150, atk=65, df=6),
-    'healer': dict(hp=150, atk=38, df=8),
+    'tank': dict(hp=420, atk=30, df=20),
+    'fighter': dict(hp=330, atk=85, df=14),
+    'assassin': dict(hp=225, atk=76, df=8),
+    'mage': dict(hp=225, atk=100, df=8),
+    'healer': dict(hp=225, atk=45, df=10),
 }
 ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
-CAP = {'s1': None, 'strike': 0.70}          # batas damage satu serangan Assassin (bagian dari HP maks target), None = tanpa batas
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
 
@@ -117,10 +116,9 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
                 x['mati'] = rounds; src['kill'] += 1
                 pertama.setdefault(x['t'], x)
 
-        def serangan(x, gross, k, src, cap=None):
+        def serangan(x, gross, k, src):
             """gross = attack x persen; k = bagian defend yang dipotong (1 = normal). Urutan: Benteng -> tank menerima 100% ->
             fighter melompat (teman 5-25%, fighter 50-70%) -> fighter menghindar. Tiap penerima memakai defend-nya sendiri."""
-            if cap: gross = min(gross, cap * x['mx'] + x['df'] * k)       # batas satu serangan terhadap target ini
             net = lambda y: max(1, round(gross - y['df'] * k))
             pr = benteng.get(id(x), 1)
             mul = lambda v: max(1, round(v * pr))
@@ -145,9 +143,9 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
             if sk == 'basic':
                 if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(BASIC[r]), 1, u)
             elif r == 'assassin' and sk == 's1':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(ASN1), 1, u, CAP['s1'])
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(ASN1), 1, u)
             elif sk == 'strike':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(STRIKE), 1, u, CAP['strike'])
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(STRIKE), 1, u)
             elif r == 'mage' and sk == 's1':
                 for x in A(1 - u['t']):
                     if id(x) not in stealth: serangan(x, u['atk'] * U_((.65, 1.0)), 1, u)

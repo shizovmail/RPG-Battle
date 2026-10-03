@@ -18,7 +18,6 @@ require_once __DIR__ . '/live.php';   // memakai live_norm, live_acak, live_tx
 const RPG_AOE = [0.65, 1.00];            // Mage skill 1: tiap lawan mendapat nilai acak sendiri (% attack)
 const RPG_ASSASSIN_1 = [0.90, 1.40];     // Assassin skill 1 (Critical bila > 115%)
 const RPG_STRIKE = [2.30, 2.80];         // Serangan Bayangan (Critical bila > 250%)
-const RPG_STRIKE_CAP = 0.70;             // satu Serangan Bayangan paling banyak 70% HP maks target (tidak ada KO sekali pukul dari HP penuh)
 const RPG_CRIT = ['basic' => 0.40, 's1' => 1.15, 'strike' => 2.50];   // ambang Critical Assassin
 const RPG_BENTENG = [0.15, 0.25];        // Benteng Tim: damage masuk 15-25% (acak per target)
 const RPG_F_TEMAN = [0.05, 0.25];        // Fighter Lompat Pelindung: teman menerima 5-25%
@@ -132,11 +131,11 @@ function rpg_db()
 function rpg_stat_bawaan()
 {
     return [
-        'tank'     => ['hp' => 340, 'atk' => 24, 'def' => 18],
-        'fighter'  => ['hp' => 240, 'atk' => 52, 'def' => 12],
-        'assassin' => ['hp' => 135, 'atk' => 90, 'def' => 5],
-        'mage'     => ['hp' => 150, 'atk' => 65, 'def' => 6],
-        'healer'   => ['hp' => 150, 'atk' => 38, 'def' => 8],   // kekuatan heal Healer = Attack-nya
+        'tank'     => ['hp' => 420, 'atk' => 30, 'def' => 20],
+        'fighter'  => ['hp' => 330, 'atk' => 85, 'def' => 14],
+        'assassin' => ['hp' => 225, 'atk' => 76, 'def' => 8],    // Serangan Bayangan maks (280%) menyisakan ±20 HP pada Assassin/Mage/Healer berHP penuh
+        'mage'     => ['hp' => 225, 'atk' => 100, 'def' => 8],
+        'healer'   => ['hp' => 225, 'atk' => 45, 'def' => 10],   // kekuatan heal Healer = Attack-nya
     ];
 }
 
@@ -260,7 +259,7 @@ function rpg_skill_katalog($peran, $tim = 1)
                 ['id' => 's1', 'nama' => 'Tusukan Mematikan', 'ikon' => '🗡️', 'tgt' => 'musuh', 'cd' => 2,
                     'desc' => 'Damage 90–140% attack ke 1 lawan; di atas 115% = CRITICAL. Damage terbesar di antara semua peran. Cooldown 2 giliran.'],
                 ['id' => 's2', 'nama' => 'Bayangan', 'ikon' => '👤', 'tgt' => 'tidak', 'cd' => 3,
-                    'desc' => 'Menghilang (tak bisa diserang giliran ini). Giliran berikutnya, jika benar lagi, serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL), tetapi satu serangan paling banyak menghabiskan 70% HP maksimal target (tidak ada KO sekali pukul dari HP penuh)! Harus benar 2 kali berturut-turut. Cooldown 3 giliran.'],
+                    'desc' => 'Menghilang (tak bisa diserang giliran ini). Giliran berikutnya, jika benar lagi, serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL)! Harus benar 2 kali berturut-turut. Cooldown 3 giliran.'],
                 $basic,
             ];
         case 'mage':
@@ -288,7 +287,7 @@ function rpg_skill_tersedia(array $u)
         if ($u['peran'] === 'assassin' && !empty($u['siap'])) {
             if ($sk['id'] === 's2') {
                 $sk = ['id' => 'strike', 'nama' => 'Serangan Bayangan', 'ikon' => '⚡', 'tgt' => 'musuh', 'cd' => 3, 'sisa' => 0, 'ok' => true,
-                    'desc' => 'Muncul dari bayangan dan serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL), maksimal 70% HP maksimal target!'];
+                    'desc' => 'Muncul dari bayangan dan serang 1 lawan dengan damage 230–280% attack (di atas 250% = CRITICAL)!'];
             } else { $sk['ok'] = false; $sk['sisa'] = 0; $sk['kunci'] = true; }
         }
         $out[] = $sk;
@@ -868,14 +867,7 @@ function rpg_hitung_dalam($s)
         } else {
             $ti = $A[$i]['target'];
             $m = $sk === 'basic' ? rpg_acak(rpg_basic_rentang($u['peran'])) : ($sk === 's1' ? rpg_acak(RPG_ASSASSIN_1) : rpg_acak(RPG_STRIKE));
-            $kot = $u['atk'] * $m; $dibatasi = false;
-            if ($sk === 'strike') {
-                $bts = RPG_STRIKE_CAP * $units[$ti]['mx'] + $units[$ti]['def'];
-                if ($kot > $bts) { $kot = $bts; $dibatasi = true; }
-            }
-            $row = $beri($tembak($ti, $kot), $m, $u['peran'], $sk);
-            if ($dibatasi && empty($row['bl']) && empty($row['sdh'])) $row['bt'] = 1;
-            $t[] = $row;
+            $t[] = $beri($tembak($ti, $u['atk'] * $m), $m, $u['peran'], $sk);
         }
         $st3[] = ['k' => 'serang', 'u' => $i, 's' => $sk, 'm' => $mode, 't' => $t];
     }
