@@ -19,7 +19,7 @@ const RPG_AOE = [0.65, 1.00];            // Mage skill 1: tiap lawan mendapat ni
 const RPG_ASSASSIN_1 = [0.90, 1.40];     // Assassin skill 1 (Critical bila > 115%)
 const RPG_STRIKE = [2.30, 2.80];         // Serangan Bayangan (Critical bila > 250%)
 const RPG_CRIT = ['basic' => 0.40, 's1' => 1.15, 'strike' => 2.50];   // ambang Critical Assassin
-const RPG_BENTENG = [0.15, 0.25];        // Benteng Tim: damage masuk 15-25% (acak per target)
+const RPG_BENTENG = [0.60, 0.70];        // Benteng Tim: damage masuk 60-70% (dikurangi acak 30-40% per anggota)
 const RPG_F_TEMAN = [0.05, 0.25];        // Fighter Lompat Pelindung: teman menerima 5-25%
 const RPG_F_DIRI = [0.50, 0.70];         // ... fighter menerima 50-70%
 const RPG_F_MENGHINDAR = [0.05, 0.25];   // ... melindungi diri sendiri (menghindar): 5-25%
@@ -235,7 +235,7 @@ function rpg_skill_katalog($peran, $tim = 1)
                 ['id' => 's1', 'nama' => 'Pasang Badan', 'ikon' => '🛡️', 'tgt' => 'sekutu_lain', 'cd' => 0,
                     'desc' => 'Pindah ke depan 1 TEMAN (bukan diri sendiri) dan tangkis serangan untuknya: teman itu menerima 0 damage dan KAMU menerima 100% damage yang tertuju ke temanmu (memakai Defend-mu), selain damage yang memang tertuju padamu. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Benteng Tim', 'ikon' => '🏰', 'tgt' => 'tidak', 'cd' => 2,
-                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan yang masuk hanya 15–25% (acak per anggota). Cooldown 2 giliran.'],
+                    'desc' => 'Lindungi SEMUA anggota tim: damage lawan dikurangi 30–40% (acak per anggota), jadi yang masuk 60–70%. Cooldown 2 giliran.'],
                 $basic,
             ];
         case 'fighter':
@@ -269,11 +269,58 @@ function rpg_skill_katalog($peran, $tim = 1)
             return [
                 ['id' => 's1', 'nama' => $s1['nama'], 'ikon' => $s1['ikon'], 'tgt' => 'tidak', 'cd' => 2, 'desc' => $s1['desc']],
                 ['id' => 's2', 'nama' => 'Kutukan', 'ikon' => '💀', 'tgt' => 'musuh', 'cd' => 2,
-                    'desc' => 'Kutuk 1 lawan: kutukan langsung aktif giliran ini, 100% berhasil — skill lawan itu GAGAL walau ia menjawab benar (sebelum ia sempat beraksi). Ia tidak tahu terkena kutukan; hasilnya tampak seperti jawaban salah. Cooldown 2 giliran.'],
+                    'desc' => 'Kutuk 1 lawan: langsung aktif giliran ini, 100% berhasil — skill lawan itu GAGAL walau ia menjawab benar. Ia tidak tahu terkena kutukan; hasilnya tampak seperti jawaban salah. Bila kamu sendiri dikutuk mage lawan, kutukanmu gagal; bila dua mage saling mengutuk, keduanya terkutuk. Cooldown 2 giliran.'],
                 $basic,
             ];
     }
     return [$basic];
+}
+
+// Petunjuk permainan, stat awal dan penjelasan skill (dipakai halaman cetak guru dan lobi HP murid).
+// Semua angka mengikuti $cfg, jadi ikut berubah bila guru mengutak-atik stat.
+function rpg_petunjuk(array $cfg)
+{
+    $fighter = !empty($cfg['pakai_fighter']);
+    $roles = $fighter ? rpg_peran_semua() : rpg_peran_list();
+    $info = rpg_peran_info();
+    $ringkas = [
+        'tank' => 'Pelindung tim: HP dan Defend terbesar, damage kecil.',
+        'fighter' => 'Petarung lincah: melindungi teman atau memukul beruntun.',
+        'assassin' => 'Penyerang tunggal paling mematikan, tetapi paling rapuh.',
+        'mage' => 'Penyerang area dan pengutuk lawan.',
+        'healer' => 'Penyembuh tim; kekuatan heal diambil dari Attack-nya.',
+    ];
+    $out = ['peran' => [], 'umum' => []];
+    foreach ($roles as $r) {
+        $st = $cfg['stat'][$r];
+        $sk = [];
+        foreach (rpg_skill_katalog($r, 1) as $k) {
+            $nm = $k['nama'];
+            if ($r === 'mage' && $k['id'] === 's1') $nm = 'Hujan Meteor (Sky Heaven) / Badai Es (Dark Earth)';
+            $row = ['nama' => $nm, 'ikon' => $k['ikon'], 'desc' => $k['desc'], 'cd' => (int)$k['cd'],
+                'tgt' => $k['tgt'] === 'musuh' ? 'pilih 1 lawan' : ($k['tgt'] === 'sekutu' ? 'pilih 1 teman (boleh diri sendiri)' : ($k['tgt'] === 'sekutu_lain' ? 'pilih 1 teman' : 'tanpa target'))];
+            if ($r === 'healer' && $k['id'] === 's1') $row['angka'] = 'Memulihkan ' . round($st['atk'] * RPG_HEAL_1[0]) . '–' . round($st['atk'] * RPG_HEAL_1[1]) . ' HP.';
+            if ($r === 'healer' && $k['id'] === 's2') $row['angka'] = 'Memulihkan ' . round($st['atk'] * RPG_HEAL_SEMUA[0]) . '–' . round($st['atk'] * RPG_HEAL_SEMUA[1]) . ' HP untuk tiap teman.';
+            $sk[] = $row;
+        }
+        if ($r === 'assassin') $sk[] = ['nama' => 'Serangan Bayangan', 'ikon' => '⚡', 'desc' => 'Giliran berikutnya setelah Bayangan (bila benar lagi): serang 1 lawan dengan damage 230–280% Attack (di atas 250% = CRITICAL).', 'cd' => 0, 'tgt' => 'pilih 1 lawan',
+            'angka' => 'Damage maksimum ' . round($st['atk'] * RPG_STRIKE[1]) . ' sebelum dikurangi Defend lawan.'];
+        $out['peran'][] = ['id' => $r, 'nama' => $info[$r]['nama'], 'ikon' => $info[$r]['ikon'], 'ringkas' => $ringkas[$r],
+            'hp' => (int)$st['hp'], 'atk' => (int)$st['atk'], 'def' => (int)$st['def'], 'skill' => $sk];
+    }
+    $n = $fighter ? 5 : 4;
+    $out['umum'] = [
+        'Dua tim bertarung: ' . rpg_tim_nama(1) . ' melawan ' . rpg_tim_nama(2) . " ($n lawan $n). Tiap murid memegang satu karakter.",
+        'Setiap giliran ada 3 tahap: (1) pilih skill dan target dalam waktu ' . (int)$cfg['waktu_pilih'] . ' detik (habis waktu = dipilihkan acak), (2) jawab satu soal, (3) hasil dihitung dan animasinya diputar di layar.',
+        'Skill hanya berhasil bila soalnya dijawab BENAR. Jawaban salah atau waktu habis = skill gagal. Skill yang gagal tetap memakai cooldown.',
+        'Cooldown "2" berarti skill tidak bisa dipakai 2 giliran berikutnya. Serangan Dasar tidak punya cooldown.',
+        'Damage = (Attack × persen skill yang diacak) − Defend lawan, minimal 1. Heal Healer dihitung dari Attack Healer. Karakter dengan HP 0 pingsan dan tidak ikut giliran berikutnya.',
+        'Urutan penghitungan dalam satu giliran: kutukan dan skill gagal → pelindung/buff (Benteng, Pasang Badan, Lompat Pelindung, Bayangan) → pemulihan (heal) → semua serangan terakhir. Karena serempak, dua karakter yang sama-sama sekarat bisa saling menjatuhkan.',
+        'Kutukan Mage: langsung aktif pada giliran itu dan membuat skill targetnya gagal walau jawabannya benar (target tidak diberi tahu). Mage yang dikutuk mage lawan kutukannya gagal; dua mage saling mengutuk = keduanya terkutuk.',
+        'Pemenang: tim yang menumbangkan semua karakter lawan. Bila soal habis (setelah pengulangan ' . (int)$cfg['ulang'] . ' kali): tim dengan karakter hidup lebih banyak, bila sama total HP lebih besar.',
+        'Kerja sama tim: Tank dan Fighter melindungi teman yang HP-nya tipis, Healer menyembuhkan sebelum HP habis, Assassin dan Mage fokus menjatuhkan lawan yang lemah.',
+    ];
+    return $out;
 }
 
 // Skill yang boleh dipakai unit $u sekarang (mengikuti cooldown & kondisi bayangan)
@@ -706,15 +753,19 @@ function rpg_hitung_dalam($s)
         $g = $rows[$u['i']];
         $A[$u['i']] = ['skill' => $g['skill'] ?: 'basic', 'target' => (int)$g['target'], 'ok' => (bool)$g['benar']];
     }
-    // 2. Kutukan Mage langsung aktif giliran ini (100%), sebelum skill siapa pun berjalan. Urutan antar-mage diacak;
-    //    mage yang sudah terkutuk lebih dulu gagal sehingga kutukannya tidak jadi dilempar. Target tidak diberi tahu.
+    // 2. Kutukan Mage (debuff) dihitung serempak sebelum skill lain berjalan, berdasarkan jawaban awal:
+    //    - target kutukan yang berlaku langsung gagal (jawaban benar pun dianggap salah);
+    //    - mage yang sendirinya dikutuk mage lain: kutukannya digagalkan, kecuali kedua mage saling mengutuk (keduanya terkutuk).
     $kutuk = [];
-    foreach ($A as $i => $a) if ($a['ok'] && $units[$i]['peran'] === 'mage' && $a['skill'] === 's2') $kutuk[] = $i;
-    foreach (rpg_acak_urut($kutuk) as $i) {
-        if (!$A[$i]['ok']) continue;
-        $t = $A[$i]['target'];
-        if (isset($A[$t])) $A[$t]['ok'] = false;
+    foreach ($A as $i => $a) if ($a['ok'] && $units[$i]['peran'] === 'mage' && $a['skill'] === 's2' && isset($A[$a['target']])) $kutuk[$i] = (int)$a['target'];
+    $berlaku = [];
+    foreach ($kutuk as $c => $t) {
+        $dikutuk = in_array($c, $kutuk, true);
+        $saling = isset($kutuk[$t]) && $kutuk[$t] === $c;
+        if ($dikutuk && !$saling) continue;
+        $berlaku[$c] = $t;
     }
+    foreach ($berlaku as $t) $A[$t]['ok'] = false;
     foreach ($units as &$u) $u['kutuk'] = 0;
     unset($u);
 

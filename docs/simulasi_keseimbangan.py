@@ -27,6 +27,7 @@ STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan h
 }
 ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
 HEAL1, HEAL2 = (1.0, 1.25), (.40, .50)      # Penyembuhan / Hujan Cahaya (kali Attack healer)
+BENTENG = (.60, .70)                          # Benteng Tim: damage masuk (dikurangi acak 30-40%)
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
 
@@ -83,13 +84,17 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
             if sk == 'basic' and tg is None: tg = pilih_en()
             ok = rnd.random() < p
             acts.append([u, sk, tg, ok])
-        # Kutukan Mage langsung aktif giliran ini (100%): dijatuhkan sebelum skill siapa pun berjalan, acak urutan antar-mage
-        ck = [a for a in acts if a[0]['r'] == 'mage' and a[1] == 's2' and a[3]]
-        rnd.shuffle(ck)
-        for a in ck:
-            if not a[3]: continue
+        # Kutukan Mage serempak: target yang terkena gagal; mage yang dikutuk mage lain kutukannya gagal, kecuali saling kutuk (keduanya terkutuk)
+        ck = {id(a[0]): a for a in acts if a[0]['r'] == 'mage' and a[1] == 's2' and a[3] and a[2] is not None}
+        berlaku = []
+        for cid, a in ck.items():
+            dikutuk = any(b[2] is a[0] for b in ck.values())
+            saling = id(a[2]) in ck and ck[id(a[2])][2] is a[0]
+            if dikutuk and not saling: continue
+            berlaku.append(a[2])
+        for tgt in berlaku:
             for b in acts:
-                if b[0] is a[2]: b[3] = False
+                if b[0] is tgt: b[3] = False
         benteng, stealth, curses, tguard, fguard, fself = {}, set(), [], {}, {}, set()
         for u, sk, tg, ok in acts:
             r = u['r']
@@ -98,7 +103,7 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
             if not ok: continue
             if r == 'tank' and sk == 's1': tguard[id(tg)] = u
             if r == 'tank' and sk == 's2':
-                for x in A(u['t']): benteng[id(x)] = U_((.15, .25))
+                for x in A(u['t']): benteng[id(x)] = U_(BENTENG)
             if r == 'fighter' and sk == 's1':
                 if tg is u: fself.add(id(u))
                 else: fguard[id(tg)] = u

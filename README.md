@@ -73,7 +73,7 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 
 | Peran | Serangan dasar (tanpa cooldown) | Skill 1 | Skill 2 |
 |---|---|---|---|
-| 🛡️ Tank | 10–20% Attack | **Pasang Badan**: pindah ke depan 1 **teman** (bukan diri sendiri); teman **0 damage**, tank menerima **100%** damage yang tertuju ke temannya (dihitung dengan Defend tank), ditambah serangan yang memang tertuju padanya · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk **15–25%** (acak per anggota) · cooldown 2 |
+| 🛡️ Tank | 10–20% Attack | **Pasang Badan**: pindah ke depan 1 **teman** (bukan diri sendiri); teman **0 damage**, tank menerima **100%** damage yang tertuju ke temannya (dihitung dengan Defend tank), ditambah serangan yang memang tertuju padanya · tanpa cooldown | **Benteng Tim**: semua anggota, damage lawan **dikurangi acak 30–40%** (yang masuk 60–70%) · cooldown 2 |
 | 🥊 Fighter | 15–35% Attack | **Lompat Pelindung**: melompat ke depan 1 teman: teman menerima **5–25%**, fighter **50–70%**. Dipilih untuk diri sendiri ⇒ menghindar, menerima **5–25%**. Bila tank menjaga, tank yang menerima · cooldown 2 | **Rentetan Pukulan**: lawan pertama 4 pukulan × **15–30%** Attack, lalu lawan kedua (acak) 1 pukulan **45–65%** Attack, salto kembali · cooldown 2 |
 | 🗡️ Assassin | 20–50% Attack (**CRITICAL** bila > 40%) | **Tusukan Mematikan**: 90–140% Attack (**CRITICAL** bila > 115%) · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 230–280%** (**CRITICAL** bila > 250%) · cooldown 3 |
 | 🔮 Mage | 10–30% Attack | **Hujan Meteor** (Sky Heaven) / **Badai Es** (Dark Earth): semua lawan, 65–100% Attack, nilai acak tiap lawan · **cooldown 2** | **Kutukan**: 1 lawan, **langsung aktif giliran itu, 100% berhasil**: skill lawan itu gagal walau jawabannya benar, sebelum ia sempat beraksi; ia tidak tahu terkena kutukan (hasilnya sama seperti jawaban salah) · cooldown 2 |
@@ -83,7 +83,13 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 * **Penjagaan satu per satu**: tiap serangan lawan dilewatkan sendiri-sendiri ke tank/fighter penjaga. Jadi bila lawan menyerang lebih dari sekali
   (beberapa penyerang, serangan area, atau 4 pukulan Fighter), penjaga menerima setiap damage itu satu per satu. Tank menangkis lebih dulu daripada Fighter.
 * Urutan perlindungan pada satu damage: Benteng Tim → tank menangkis → fighter melompat (bila fighter dijaga tank, tank menerima bagian fighter) → fighter menghindar.
-* Aksi dalam satu giliran dihitung serempak: **kutukan** (langsung menggagalkan skill targetnya) → perisai/lompat/bayangan → pemulihan → serangan.
+* **Urutan eksekusi satu giliran** (semua berdasarkan pilihan dan jawaban di awal giliran; serangan selalu paling akhir):
+  1. **Kutukan** (debuff) dihitung serempak: target yang terkena langsung gagal (jawaban benar pun dianggap salah, notifikasinya sama seperti jawaban salah). Mage yang sendirinya dikutuk mage lawan
+     kutukannya **gagal**; bila dua mage **saling mengutuk**, **keduanya terkutuk** dan sama-sama menerima notifikasi salah.
+  2. **Defend/buff**: Benteng Tim, Pasang Badan, Lompat Pelindung, Bayangan.
+  3. **Heal**.
+  4. **Semua serangan** terakhir (urutan serangan diacak, tetapi semuanya tetap terjadi walau pelakunya jatuh oleh serangan lain di giliran yang sama).
+  Sebelum perubahan ini kutukan dihitung berurutan secara acak antar-mage (siapa yang lebih dulu menang), sehingga kutukan mage yang dikutuk bisa tetap berlaku dan saling kutuk hanya mengenai satu mage.
 * **Siapa menyerang duluan?** Semua serangan dalam satu giliran bersifat **serempak**: tiap karakter yang hidup di awal giliran dan menjawab benar tetap menyerang
   walau ia dijatuhkan HP-nya oleh serangan lain pada giliran yang sama. Jadi bila dua Assassin sama-sama tinggal 1 hit KO dan keduanya menyerang, **keduanya pingsan**
   (tidak ada yang "duluan"). Urutan acak hanya memengaruhi kejadian yang saling bergantung, mis. siapa yang menghabiskan HP target lebih dulu (kredit kill) atau
@@ -112,38 +118,45 @@ Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat baw
 Jalankan `python3 docs/simulasi_keseimbangan.py [giliran_maks] [jumlah_simulasi]` untuk mengulang semua angka di bawah. "Acak" = skill & target acak (batas bawah),
 "terarah" = menyerang 2 lawan terlemah dan melindungi 2 sekutu terlemah; *p* = peluang menjawab benar. Kedua sisi menang ±50% (cermin).
 
-**Cara pertandingan berakhir** (soal habis di giliran 30; *habis* = semua musuh habis, di antaranya yang selesai ≤ 20 giliran; *hidup* = menang selisih jumlah karakter hidup; *HP* = menang selisih total HP; p = peluang benar):
+**Cara pertandingan berakhir** (soal habis di giliran 30; *habis* = semua musuh habis, di antaranya yang selesai ≤ 20 giliran; *hidup* = menang selisih jumlah karakter hidup; *HP* = menang selisih total HP; p = peluang benar).
+Setelah Benteng Tim dikurangi kekuatannya (damage masuk 15–25% → 60–70%):
 
 | Mode | Pemain | p | Habis (≤20 giliran) | Hidup | HP | Rata-rata giliran |
 |---|---|---|---|---|---|---|
-| 4 vs 4 | acak | 0,7 | **55%** (14%) | 36% | 9% | 26,5 |
-| 4 vs 4 | terarah | 0,7 | **41%** (8%) | 48% | 11% | 27,7 |
-| 5 vs 5 | acak | 0,7 | **64%** (19%) | 30% | 6% | 25,6 |
-| 5 vs 5 | terarah | 0,7 | **52%** (10%) | 41% | 6% | 26,8 |
-| 4 vs 4 | acak / terarah | 0,9 | 78% (34%) / 66% (20%) | 16% / 26% | 5% / 8% | 23,4 / 25,2 |
-| 5 vs 5 | acak / terarah | 0,9 | 84% (39%) / 70% (24%) | 12% / 24% | 3% / 6% | 22,5 / 24,8 |
-| 4 vs 4 | acak / terarah | 0,5 | 25% / 17% | 62% / 66% | 13% / 17% | 28,8 / 29,3 |
+| 4 vs 4 | acak | 0,7 | **60%** (17%) | 32% | 8% | 25,9 |
+| 4 vs 4 | terarah | 0,7 | **48%** (10%) | 42% | 10% | 27,1 |
+| 5 vs 5 | acak | 0,7 | **70%** (25%) | 25% | 4% | 24,6 |
+| 5 vs 5 | terarah | 0,7 | **58%** (14%) | 35% | 7% | 26,3 |
+| 4 vs 4 | acak / terarah | 0,9 | 85% (42%) / 75% (27%) | 10% / 19% | 4% / 6% | 22,1 / 24,2 |
+| 5 vs 5 | acak / terarah | 0,9 | 88% (48%) / 81% (34%) | 9% / 15% | 3% / 4% | 21,4 / 23,3 |
+| 4 vs 4 | acak / terarah | 0,5 | 28% / 21% | 60% / 65% | 12% / 14% | 28,6 / 29,1 |
 
-Peran (4v4 terarah, p = 0,7): porsi damage Assassin 52% / Mage 47%; kill akhir Assassin 76% / Mage 24%; tumbang: Mage 49%, Assassin 42%, Tank 41%, Healer 35%.
-Tank dikeroyok seluruh lawan tanpa heal: tidak tumbang dalam 2 giliran (0–1%), dalam 3 giliran 13% (4v4) / 23% (5v5). Karakter lemah dikeroyok 3–4 lawan: bertahan ±2,7–2,9 giliran; + Healer ±2,9; + Healer + Tank ±8,0; + Tank + Fighter ±9,8 (5 vs 5, semua jawaban benar).
-**Mengapa heal diperkecil:** pada tahap sebelumnya (Healer Attack 50, heal 200–250%) simulasi rata-rata ±50 giliran karena heal ±78 HP/giliran menetralkan damage; sekarang heal 100–125% / 40–50%.
+Sebelumnya (Benteng 15–25%) semua musuh habis 55% / 41% (4v4 acak / terarah) dan 64% / 52% (5v5): nerf Benteng membuat pertandingan sedikit lebih cepat selesai dan serangan lebih sering menembus.
+Peran (4v4 terarah, p = 0,7): porsi damage Assassin 52% / Mage 47%; kill akhir Assassin 76% / Mage 23%; tumbang: Mage 52%, Assassin 46%, Tank 44%, Healer 38%.
+Tank dikeroyok seluruh lawan tanpa heal: tidak tumbang dalam 2 giliran (0–1%), dalam 3 giliran 12% (4v4) / 25% (5v5). Karakter lemah dikeroyok 3–4 lawan bertahan ±2,7–2,9 giliran; + Healer ±2,9; + Healer + Tank ±8,0; + Tank + Fighter ±9,8 (5 vs 5).
 
 **Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % *habis / hidup / HP*; giliran maksimum = soal × (pengulangan + 1)):
 
 | Soal · ulang | Stat | Pemain terarah | Pemain acak |
 |---|---|---|---|
-| 5 · 1 (maks 10) | bawaan | 0 / 57 / 42 | 0 / 56 / 44 |
-| | HP ×0,5 | 10 / 72 / 18 | 20 / 65 / 16 |
-| 8 · 1 (maks 16) | bawaan | 2 / 73 / 25 | 3 / 71 / 26 |
-| | HP ×0,5 | 45 / 45 / 10 | 61 / 31 / 8 |
-| 8 · 2 (maks 24) | bawaan | 20 / 66 / 15 | 30 / 56 / 14 |
-| | HP ×0,5 | 79 / 17 / 4 | 87 / 10 / 3 |
-| 10 · 1 (maks 20) | bawaan | 8 / 74 / 18 | 14 / 68 / 18 |
-| | HP ×0,5 | 65 / 28 / 6 | 78 / 17 / 5 |
-| 10 · 2 (maks 30) | bawaan | 41 / 48 / 11 | 55 / 36 / 9 |
+| 5 · 1 (maks 10) | bawaan | 0 / 63 / 37 | 0 / 60 / 40 |
+| | HP ×0,5 | 14 / 70 / 16 | 24 / 60 / 16 |
+| 8 · 1 (maks 16) | bawaan | 2 / 76 / 22 | 5 / 72 / 23 |
+| | HP ×0,5 | 52 / 39 / 9 | 65 / 28 / 6 |
+| 8 · 2 (maks 24) | bawaan | 25 / 62 / 13 | 35 / 53 / 12 |
+| | HP ×0,5 | 82 / 13 / 4 | 89 / 8 / 2 |
+| 10 · 1 (maks 20) | bawaan | 10 / 73 / 16 | 17 / 67 / 16 |
+| | HP ×0,5 | 71 / 23 / 6 | 82 / 14 / 4 |
+| 10 · 2 (maks 30) | bawaan | 48 / 42 / 10 | 60 / 32 / 8 |
 
-Dengan stat bawaan, soal sedikit hampir tidak pernah berakhir dengan semua musuh habis (hasil ditentukan selisih jumlah hidup lalu total HP). Agar lebih seru: tambah pengulangan soal 2–3 kali, atau kecilkan HP semua peran ×0,5
-(catatan: HP ×0,5 membuat Serangan Bayangan kembali bisa KO sekali pukul). Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
+Dengan stat bawaan, soal sedikit hampir tidak pernah berakhir dengan semua musuh habis. Agar lebih seru: tambah pengulangan soal 2–3 kali, atau kecilkan HP semua peran ×0,5 (catatan: HP ×0,5 membuat Serangan Bayangan kembali bisa KO sekali pukul).
+Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
+
+### Petunjuk permainan (cetak dan lobi HP murid)
+
+* **Cetak**: tombol **🖨️ Cetak petunjuk** di Panel wasit (`guru/rpg_cetak.php`) membuka halaman siap cetak berisi petunjuk permainan, stat awal tiap karakter, dan penjelasan semua skill (termasuk angka heal dan damage maksimum Bayangan).
+  Angkanya **mengikuti stat yang sedang dipakai**, jadi bila guru mengubah stat (formulir atau Panel wasit lobi) hasil cetaknya ikut berubah.
+* **HP murid**: selama menunggu di lobi, murid melihat tiga bagian yang bisa dibuka-tutup: *Petunjuk permainan*, *Stat awal tiap karakter*, *Skill tiap karakter* (ikut berubah bila guru mengubah stat). Perlu **simpan ulang** game agar halaman murid terbarui.
 
 ### Pilih peran mandiri & koneksi otomatis
 
@@ -185,9 +198,9 @@ Giliran maksimum mengikuti kategori yang soalnya paling sedikit.
 ## Pengujian yang sudah dilakukan
 
 * Simulasi game penuh via API (8–10 murid virtual) sampai ada pemenang.
-* 39+ pemeriksaan aturan otomatis (cooldown, Benteng 15–25%, Pasang Badan 0%/100% dan tak bisa diri sendiri, Fighter: lompat pelindung 5–25%/50–70%,
+* 39+ pemeriksaan aturan otomatis (cooldown, Benteng 60–70%, Pasang Badan 0%/100% dan tak bisa diri sendiri, Fighter: lompat pelindung 5–25%/50–70%,
   menghindar 20%, rantai tank-fighter, rentetan pukulan 4+1, basic 10–20%, kategori soal & rotasi Fighter, 5 vs 5, soal sama untuk kedua tim,
-  bayangan 275%, kutukan langsung 100%, heal, tumbang semua/seri, soal habis, auto-acak, ganti pemain).
+  bayangan 275%, kutukan serempak (biasa, saling kutuk, digagalkan mage lawan), petunjuk/cetak mengikuti stat, heal, tumbang semua/seri, soal habis, auto-acak, ganti pemain).
 * Tangkapan layar proyektor, panel wasit, formulir, dan HP murid pada setiap tahap (Chromium).
 * Kunci jawaban tidak ada di `index.html` game maupun di respons API murid; aksi guru butuh login + CSRF.
 

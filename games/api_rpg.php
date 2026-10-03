@@ -360,6 +360,7 @@ function rpg_murid_state($s, $p)
         'ok' => true, 'st' => $st, 'ronde' => (int)$s['ronde'], 'nama' => $p['nama'],
         'tim' => $ui >= 0 ? rpg_unit_tim($ui) : 0, 'peran' => $ui >= 0 ? rpg_unit_peran($ui) : '', 'aku' => $ui,
         'unit' => rpg_unit_tampil($s, $units, $slot, false), 'mandiri' => !empty($cfg['pilih_mandiri']), 'fighter' => !empty($cfg['pakai_fighter']),
+        'petunjuk' => $st === 'lobi' ? rpg_petunjuk($cfg) : null,
         'hidup' => [1 => rpg_hidup($units, 1), 2 => rpg_hidup($units, 2)],
         'sisa' => rpg_sisa_ms($s, $cfg), 'total' => rpg_total_ms($s, $cfg), 'sblm' => $s['sblm'],
     ];

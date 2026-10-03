@@ -90,6 +90,13 @@
   .chip{display:inline-block;background:#eef1f7;color:#1c2436;border-radius:999px;padding:4px 12px;margin:3px;font-size:.9rem;font-weight:700}
   .chip.r{background:#ffe3e3;color:#a12a2a}.chip.g{background:#dff7e8;color:#12704a}
   .selesai-menang .big{animation:lompat .8s ease-in-out infinite}
+  .pt{background:var(--card);color:var(--ink);border-radius:18px;padding:6px 14px;margin-top:12px;text-align:left}
+  .pt details{border-bottom:1px solid #dfe3ee;padding:8px 0}.pt details:last-child{border:0}
+  .pt summary{font-weight:800;cursor:pointer;font-size:1rem}
+  .pt ol,.pt ul{margin:8px 0 4px 18px;padding:0;font-size:.9rem}.pt li{margin:4px 0}
+  .pt table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.9rem}
+  .pt th,.pt td{border-bottom:1px solid #dfe3ee;padding:5px 4px;text-align:center}.pt td.l,.pt th.l{text-align:left}
+  .pt .rl{margin:10px 0 2px;font-weight:800}.pt .sk2{font-size:.88rem;margin:5px 0 5px 4px}.pt .sk2 small{color:#5b6477}
   .pk{margin-top:12px;text-align:left}.pk h3{margin:0 0 6px;font-size:.95rem}
   .pk.t1 h3{color:#b88400}.pk.t2 h3{color:#8d5a2b}
   .pr{display:flex;align-items:center;gap:10px;background:#f1f3f9;border:2px solid transparent;border-radius:14px;padding:8px 10px;margin-bottom:6px}
@@ -111,7 +118,7 @@
   var D = GK.data, esc = GK.esc, app = document.getElementById('app');
   var API = GK.base + 'api_rpg.php';
   var KEY = 'rpg_' + D.id;
-  var S = { sesi: 0, p: '', nama: '', key: '', sisa: null, total: 0, t0: 0, pollT: 0, mode: 'cari', final: false, terkirim: false, j: null };
+  var S = { buka: {}, sesi: 0, p: '', nama: '', key: '', sisa: null, total: 0, t0: 0, pollT: 0, mode: 'cari', final: false, terkirim: false, j: null };
   var PERAN = { tank: ['Tank', '🛡️'], fighter: ['Fighter', '🥊'], assassin: ['Assassin', '🗡️'], mage: ['Mage', '🔮'], healer: ['Healer', '✨'] };
   var WARNA = { 1: { tank: '#f6c400', fighter: '#8bc34a', assassin: '#4b2a78', mage: '#d32f2f', healer: '#f4f4f8' }, 2: { tank: '#8d5a2b', fighter: '#d84315', assassin: '#1a1a1f', mage: '#8fd8f5', healer: '#43a85f' } };
   var TIM = { 1: 'Sky Heaven Guardians', 2: 'Dark Earth Warriors' };
@@ -233,6 +240,7 @@
     var hpkey = j.unit.map(function (u) { return u.hp; }).join(',');
     var key = [st, j.ronde, j.tim, j.peran, j.sudah ? 1 : 0, j.dikunci ? 1 : 0, j.ikut ? 1 : 0, j.mati ? 1 : 0, j.hasil ? 1 : 0, j.sblm || ''].join('|');
     if (st === 'lobi') key += '|' + (j.mandiri ? 1 : 0) + '|' + j.aku + '|' + j.unit.map(function (u) { return u.nama; }).join(',');
+    if (st === 'lobi' && j.petunjuk) key += '|' + j.petunjuk.peran.map(function (r) { return r.hp + '.' + r.atk + '.' + r.def; }).join(',');
     if (st === 'hasil' || st === 'selesai' || st === 'jeda') key += '|' + hpkey;
     if (key === S.key) return;
     S.key = key;
@@ -251,15 +259,33 @@
     mage: 'Penyerang area & kutukan. Jatuhkan serangan ke semua lawan.',
     healer: 'Penyembuh tim. Pulihkan HP temanmu.'
   };
+  // petunjuk permainan, stat awal dan skill tiap karakter (tampil selama menunggu di lobi)
+  function petunjukHtml(j) {
+    var p = j.petunjuk;
+    if (!p) return '';
+    function d(id, judul, isi) { return '<details data-d="' + id + '"' + (S.buka[id] ? ' open' : '') + '><summary>' + judul + '</summary>' + isi + '</details>'; }
+    var umum = '<ol>' + p.umum.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>';
+    var stat = '<table><tr><th class="l">Peran</th><th>HP</th><th>Attack</th><th>Defend</th></tr>' + p.peran.map(function (r) {
+      return '<tr><td class="l">' + r.ikon + ' ' + esc(r.nama) + '</td><td>' + r.hp + '</td><td>' + r.atk + '</td><td>' + r.def + '</td></tr>'; }).join('') + '</table>';
+    var sk = p.peran.map(function (r) {
+      return '<div class="rl">' + r.ikon + ' ' + esc(r.nama) + ' <small>— ' + esc(r.ringkas) + '</small></div>' + r.skill.map(function (k) {
+        return '<div class="sk2"><b>' + k.ikon + ' ' + esc(k.nama) + '</b> <small>(' + esc(k.tgt) + (k.cd > 0 ? ', cooldown ' + k.cd : ', tanpa cooldown') + ')</small><br>' + esc(k.desc) + (k.angka ? ' <i>' + esc(k.angka) + '</i>' : '') + '</div>'; }).join(''); }).join('');
+    return '<div class="pt">' + d('umum', '📖 Petunjuk permainan', umum) + d('stat', '📊 Stat awal tiap karakter', stat) + d('skill', '✨ Skill tiap karakter', sk) + '</div>';
+  }
+  function pasangPetunjuk() {
+    app.querySelectorAll('.pt details').forEach(function (el) { el.addEventListener('toggle', function () { S.buka[el.dataset.d] = el.open; }); });
+  }
   function lobi(j) {
     if (j.mandiri) return pilihPeran(j);
     if (j.aku < 0) {
-      panel('<div class="big tunggu-anim">⏳</div><h2>Kamu sudah masuk!</h2><p><b>' + esc(j.nama) + '</b></p>'
-        + '<p>Menunggu guru mengatur peranmu.</p><p class="muted">Jika kamu belum kebagian peran, kamu tetap bisa menonton dan menggantikan teman bila perlu.</p>');
+      tampil('<div class="panel"><div class="big tunggu-anim">⏳</div><h2>Kamu sudah masuk!</h2><p><b>' + esc(j.nama) + '</b></p>'
+        + '<p>Menunggu guru mengatur peranmu.</p><p class="muted">Jika kamu belum kebagian peran, kamu tetap bisa menonton dan menggantikan teman bila perlu.</p></div>' + petunjukHtml(j));
+      pasangPetunjuk();
       return;
     }
     tampil('<div class="panel"><div class="big">' + PERAN[j.peran][1] + '</div><h2>' + PERAN[j.peran][0] + ' · ' + TIM[j.tim] + '</h2><p><b>' + esc(j.nama) + '</b></p><p>' + KAT[j.peran] + '</p>'
-      + '<p class="muted">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>' + strip(j));
+      + '<p class="muted">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>' + strip(j) + petunjukHtml(j));
+    pasangPetunjuk();
   }
   // murid memilih peran sendiri di lobi (bisa keluar lagi agar temannya bisa masuk)
   function pilihPeran(j) {
@@ -274,8 +300,9 @@
       });
       h += '</div>';
     });
-    h += '<p class="muted" style="margin-top:10px">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>';
+    h += '<p class="muted" style="margin-top:10px">Tunggu guru memulai pertandingan. Jangan tutup halaman ini.</p></div>' + petunjukHtml(j);
     tampil(h);
+    pasangPetunjuk();
     function kirim(isi) {
       isi.sesi = S.sesi; isi.p = S.p;
       api('peran', '', isi).then(function (r) {

@@ -64,6 +64,7 @@ page_header('Panel wasit', 'guru/game.php');
   <div class="actions">
     <button class="btn primary" id="btn-layar">🖥️ Buka layar proyektor</button>
     <a class="btn" href="<?= e(url('guru/buat.php?id=' . $g['id'])) ?>">Edit soal & stat</a>
+    <a class="btn" target="_blank" href="<?= e(url('guru/rpg_cetak.php?id=' . $g['id'])) ?>">🖨️ Cetak petunjuk</a>
     <a class="btn" href="<?= e(url('guru/skor.php?id=' . $g['id'])) ?>">Nilai</a>
   </div>
 </div>
