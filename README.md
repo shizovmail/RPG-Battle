@@ -75,7 +75,7 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 |---|---|---|---|
 | 🛡️ Tank | 10–20% Attack | **Pasang Badan**: pindah ke depan 1 **teman** (bukan diri sendiri); teman **0 damage**, tank menerima **100%** damage yang tertuju ke temannya (dihitung dengan Defend tank), ditambah serangan yang memang tertuju padanya · tanpa cooldown | **Benteng Tim**: semua anggota, damage masuk **15–25%** (acak per anggota) · cooldown 2 |
 | 🥊 Fighter | 15–35% Attack | **Lompat Pelindung**: melompat ke depan 1 teman: teman menerima **5–25%**, fighter **50–70%**. Dipilih untuk diri sendiri ⇒ menghindar, menerima **5–25%**. Bila tank menjaga, tank yang menerima · cooldown 2 | **Rentetan Pukulan**: lawan pertama 4 pukulan × **15–30%** Attack, lalu lawan kedua (acak) 1 pukulan **45–65%** Attack, salto kembali · cooldown 2 |
-| 🗡️ Assassin | 20–50% Attack (**CRITICAL** bila > 40%) | **Tusukan Mematikan**: 90–140% Attack (**CRITICAL** bila > 115%) · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 230–280%** (**CRITICAL** bila > 250%) · cooldown 3 |
+| 🗡️ Assassin | 20–50% Attack (**CRITICAL** bila > 40%) | **Tusukan Mematikan**: 90–140% Attack (**CRITICAL** bila > 115%) · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 230–280%** (**CRITICAL** bila > 250%), **paling banyak 70% HP maksimal target** — tidak ada KO sekali pukul dari HP penuh · cooldown 3 |
 | 🔮 Mage | 10–30% Attack | **Hujan Meteor** (Sky Heaven) / **Badai Es** (Dark Earth): semua lawan, 65–100% Attack, nilai acak tiap lawan · **cooldown 2** | **Kutukan**: 1 lawan, **langsung aktif giliran itu, 100% berhasil**: skill lawan itu gagal walau jawabannya benar, sebelum ia sempat beraksi; ia tidak tahu terkena kutukan (hasilnya sama seperti jawaban salah) · cooldown 2 |
 | ✨ Healer | 5–25% Attack | **Penyembuhan**: 1 anggota, **200–250%** Attack healer · tanpa cooldown | **Hujan Cahaya**: semua anggota, **80–100%** Attack healer (acak tiap teman) · cooldown 3 |
 
@@ -109,55 +109,53 @@ Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat baw
 Jalankan `python3 docs/simulasi_keseimbangan.py [giliran_maks] [jumlah_simulasi]` untuk mengulang semua angka di bawah. "Acak" = skill & target acak (batas bawah),
 "terarah" = menyerang 2 lawan terlemah dan melindungi 2 sekutu terlemah; *p* = peluang menjawab benar. Kedua sisi menang ±50% (cermin).
 
+**Assassin tidak lagi KO sekali pukul.** Sebelumnya Serangan Bayangan (230–280% × Attack 90 ≈ 200–250 damage) menjatuhkan Assassin/Mage/Healer (HP 135–150) dari HP penuh dalam sekali serang.
+Sekarang satu Serangan Bayangan dibatasi **70% HP maksimal target** (mis. ±94 dari 135 HP, ±105 dari 150 HP); target yang sudah terluka tetap bisa dihabisi. Angka persen (230–280%, Critical > 250%) tetap tampil
+dan di panel wasit muncul keterangan "[dibatasi 70% HP maks]". Alternatif yang diuji di simulasi: batas 60% (Assassin makin lemah, 4v4 hanya 37% berakhir habis), batas 70% untuk semua serangan Assassin (hasil hampir sama),
+atau hanya menurunkan persen Bayangan tanpa batas (160–200% masih KO sekali pukul). Batas 70% dipilih karena kecil efeknya pada pemain yang baik tetapi menghapus KO instan. Dampak (4 vs 4, pemain terarah, p = 0,7):
+porsi damage Assassin 56% → 51%, kill akhir Assassin 84% → 68% (Mage 16% → 32%), Assassin pingsan 52% → 47%.
+
 **Pertandingan penuh (soal habis di giliran 30, p = 0.7):**
 
 | Mode | Pemain | Semua musuh habis | Selisih jumlah hidup | Selisih total HP | Rata-rata giliran |
 |---|---|---|---|---|---|
-| 4 vs 4 | acak | **72%** | 22% | 5% | 23,3 |
-| 4 vs 4 | terarah | **59%** | 33% | 8% | 25,2 |
-| 5 vs 5 | acak | **67%** | 27% | 6% | 24,2 |
-| 5 vs 5 | terarah | **55%** | 39% | 7% | 26,0 |
+| 4 vs 4 | acak | **59%** | 33% | 8% | 24,8 |
+| 4 vs 4 | terarah | **44%** | 47% | 9% | 26,8 |
+| 5 vs 5 | acak | **62%** | 33% | 5% | 24,9 |
+| 5 vs 5 | terarah | **46%** | 46% | 8% | 26,9 |
 
-Pemulihan rata-rata ±19–25 HP per tim per giliran. Peran tumbang: Mage 58–62%, Assassin 52–58% (peran pertama yang tumbang bila lawan fokus: 39–43%), Healer 44–53%, Tank 35–47%.
+Peran tumbang (4v4 terarah): Mage 49%, Assassin 47% (peran pertama yang tumbang bila lawan fokus: 40%), Healer 35%, Tank 27%. Pemulihan rata-rata ±23–28 HP per tim per giliran.
 
-**Karakter lemah dikeroyok 2–4 lawan terkuat (tanpa dilindungi), lalu di-heal** (5 vs 5, semua jawaban benar; korban Assassin/Mage/Healer ~HP 135–150):
+**Karakter lemah dikeroyok 2–4 lawan terkuat tiap giliran, lalu di-heal** (5 vs 5, semua jawaban benar; korban Assassin/Mage/Healer HP 135–150). Rata-rata giliran bertahan (maks 12):
 
-| Bantuan | Korban dikeroyok 2 lawan | 3 lawan | 4 lawan |
+| Bantuan | Dikeroyok 2 lawan | 3 lawan | 4 lawan |
 |---|---|---|---|
-| tanpa bantuan | bertahan rata-rata 2,2–2,5 giliran | 1,9–2,1 | 1,9–2,1 |
-| + Healer menyembuhkan korban tiap giliran | 2,3–2,5 (hanya +0,1–0,2) | 2,1–2,3 | 2,1–2,3 |
-| + Healer + Tank (Pasang Badan ke korban) | 7,7–8,0 giliran; 92–97% hidup lewat 4 giliran | 6,7–7,4 | 6,6–7,3 |
-| + Healer + Tank + Fighter | 9,1–9,4; hidup lewat 8 giliran 53–58% | 8,2–8,7 | 8,2–8,6 |
+| tanpa bantuan | 2,7–3,0 | 2,0–2,2 | 2,0–2,2 |
+| + Healer menyembuhkan korban tiap giliran | 3,8–6,7 | 2,7–3,6 | 2,7–3,5 |
+| + Healer + Tank (Pasang Badan ke korban) | 9,9–10,6 | 8,1–8,6 | 8,1–8,6 |
+| + Healer + Tank + Fighter | 11,0–11,5 | 9,1–9,7 | 9,1–9,7 |
 
-Dengan peluang benar 0,7 angkanya lebih panjang tetapi pola sama: heal saja menambah ±0,2–0,7 giliran, heal + tank ±4–5 giliran lebih lama, + fighter ±1 giliran lagi.
+Kesimpulan healer: dikeroyok 3–4 lawan tanpa pelindung korban tetap tumbang dalam ±2–3 giliran (heal menambah ±0,7–1,5 giliran); dikeroyok 2 lawan heal jelas berarti (Mage 3,0 → 6,7 giliran).
+Heal berjalan *sebelum* serangan di giliran yang sama, jadi tidak menambal damage giliran itu. Heal + Tank (+ Fighter) membuat korban bertahan 8–11 giliran. Healer sebaiknya menyembuhkan sebelum HP tipis, dan memakai Hujan Cahaya bila 2+ anggota terluka.
 
-Kesimpulan healer:
-* **Bila 2–4 lawan fokus ke satu karakter lemah tanpa pelindung, heal saja hampir tidak menyelamatkannya.** Penyebabnya bukan besar heal (sekarang 76–95 HP per Penyembuhan), melainkan *burst*
-  lawan: Assassin saja bisa 90–140% Attack, dan Serangan Bayangan 230–280% Attack (±200+ damage) bisa menjatuhkan Assassin/Mage/Healer dari HP penuh dalam sekali serang. Heal juga berjalan
-  *sebelum* serangan di giliran yang sama, jadi tidak bisa "menambal" damage giliran itu.
-* **Heal efektif bila dikombinasikan dengan pelindung.** Tank (Pasang Badan, menerima 100% dengan HP 340/Defend 18) dan Fighter menahan burst, sementara healer mengisi ulang HP tank/korban di
-  giliran-giliran berikutnya. Karena itu peran healer penting untuk menopang Tank yang kini menerima semua damage penjagaan.
-* Healer sebaiknya memakai Penyembuhan pada karakter yang terluka **sebelum** sekarat (jangan menunggu HP tipis), dan Hujan Cahaya saat 2+ anggota terluka.
-
-**Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % pertandingan berakhir: *semua musuh habis / selisih jumlah hidup / selisih total HP*; "soal" = soal per putaran,
-giliran maksimum = soal × (pengulangan + 1)):
+**Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % pertandingan berakhir: *semua musuh habis / selisih jumlah hidup / selisih total HP*; giliran maksimum = soal × (pengulangan + 1)):
 
 | Soal · ulang | Stat | Pemain terarah | Pemain acak |
 |---|---|---|---|
-| 5 · 1 (maks 10) | bawaan | 1 / 73 / 27 | 1 / 71 / 27 |
-| | HP ×0,5 | 23 / 62 / 15 | 35 / 52 / 12 |
-| | HP ×0,4 + Defend ×0,5 | 48 / 40 / 12 | 64 / 28 / 8 |
-| 5 · 2 (maks 15) | HP ×0,5 | 57 / 33 / 10 | 70 / 22 / 6 |
-| 8 · 1 (maks 16) | bawaan | 9 / 74 / 17 | 18 / 66 / 16 |
-| | HP ×0,5 | 61 / 30 / 9 | 75 / 19 / 6 |
-| 10 · 1 (maks 20) | bawaan | 24 / 62 / 14 | 35 / 55 / 10 |
-| | HP ×0,5 | 77 / 16 / 7 | 85 / 10 / 4 |
-| 10 · 2 (maks 30) | bawaan | 59 / 33 / 8 | 72 / 22 / 5 |
+| 5 · 1 (maks 10) | bawaan | 0 / 67 / 33 | 1 / 66 / 33 |
+| | HP ×0,5 | 11 / 71 / 18 | 23 / 62 / 15 |
+| | HP ×0,4 + Defend ×0,5 | 37 / 51 / 11 | 56 / 34 / 10 |
+| 5 · 2 (maks 15) | HP ×0,5 | 37 / 50 / 12 | 57 / 34 / 9 |
+| 8 · 1 (maks 16) | bawaan | 6 / 76 / 18 | 12 / 70 / 18 |
+| | HP ×0,5 | 42 / 46 / 11 | 63 / 28 / 8 |
+| 8 · 2 (maks 24) | HP ×0,5 | 73 / 21 / 6 | 83 / 12 / 4 |
+| 10 · 1 (maks 20) | bawaan | 15 / 71 / 13 | 27 / 59 / 14 |
+| | HP ×0,5 | 62 / 30 / 7 | 75 / 19 / 5 |
+| 10 · 2 (maks 30) | bawaan | 44 / 47 / 9 | 59 / 33 / 8 |
 
-Artinya: dengan stat bawaan, **5–8 soal + 1 pengulangan hampir tidak pernah berakhir dengan semua musuh habis** (1–18%); hasil biasanya ditentukan selisih jumlah karakter hidup (±70%) lalu selisih total HP.
-Agar seru seperti bermain dengan banyak soal, guru bisa (urut dari yang paling mudah): **(1) kecilkan HP semua peran jadi ×0,5** (soal 8–10: 61–85% berakhir habis); **(2) bila soal ≤ 6, tambah pengulangan 2–3 kali**
-(kolom "5 · 2"); **(3) HP ×0,4 + Defend ×0,5** untuk soal 5–6; atau **(4) naikkan Attack ×1,3** (efek lebih lembut: soal 8 + ulang 1 ⇒ habis 32–48%). Stat diubah di formulir game atau di Panel wasit (lobi).
-Catatan: model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
+Dengan stat bawaan, soal sedikit hampir tidak pernah berakhir dengan semua musuh habis; hasilnya ditentukan selisih jumlah hidup. Agar seru: **(1) HP semua peran ×0,5** (soal 8–10 + 1 ulang: 42–75% habis);
+**(2) bila soal ≤ 6, tambah pengulangan 2–3 kali**; **(3) HP ×0,4 + Defend ×0,5** untuk soal 5–6 (37–56% habis, 65–77% dengan ulang 2); atau **(4) naikkan Attack ×1,3**.
+Stat diubah di formulir game atau Panel wasit (lobi). Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
 
 ### Pilih peran mandiri & koneksi otomatis
 

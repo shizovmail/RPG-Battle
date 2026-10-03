@@ -284,7 +284,7 @@ page_header('Panel wasit', 'guru/game.php');
     if (e.k === 'heal') return '<span class="heal">'+n(u)+' memakai '+(e.m==='semua'?'Hujan Cahaya':'Penyembuhan')+': '+e.h.map(function(h){ return esc(nm(j,h.u))+' +'+h.n; }).join(', ')+'</span>';
     if (e.k === 'serang') {
       var s = {basic:'Serangan Dasar', s1:'skill 1', strike:'Serangan Bayangan 275%', f2:'Rentetan Pukulan'}[e.s] || e.s;
-      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bl?' <b>meleset (bayangan)</b>':(t.fgd?' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span> (fighter '+n(t.fgd.u)+' '+(t.fgd.tk?'ditangkis tank '+n(t.fgd.tk.u)+' −'+t.fgd.tk.r:'−'+t.fgd.r)+')':(t.gd?' <b>ditangkis</b> '+n(t.tk.u)+' <span class="dmg">−'+(t.tk.r!=null?t.tk.r:t.tk.d)+'</span>'+(t.tk.ko?' 💫':''):(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':'')+(t.cr?' <b style="color:#d32f2f">CRITICAL</b>':'')+(t.pm?' <span class="muted">['+t.pm+'%]</span>':''))))); }).join(', ');
+      return n(u)+' ('+s+') → '+e.t.map(function(t){ return esc(nm(j,t.u))+(t.bt?' <i>[dibatasi 70% HP maks]</i>':'')+(t.bl?' <b>meleset (bayangan)</b>':(t.fgd?' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span> (fighter '+n(t.fgd.u)+' '+(t.fgd.tk?'ditangkis tank '+n(t.fgd.tk.u)+' −'+t.fgd.tk.r:'−'+t.fgd.r)+')':(t.gd?' <b>ditangkis</b> '+n(t.tk.u)+' <span class="dmg">−'+(t.tk.r!=null?t.tk.r:t.tk.d)+'</span>'+(t.tk.ko?' 💫':''):(t.sdh?' (sudah pingsan)':' <span class="dmg">−'+(t.r!=null?t.r:t.d)+'</span>'+(t.pr?' (perisai)':'')+(t.ko?' 💫':'')+(t.cr?' <b style="color:#d32f2f">CRITICAL</b>':'')+(t.pm?' <span class="muted">['+t.pm+'%]</span>':''))))); }).join(', ');
     }
     if (e.k === 'ko') return '💫 <b>'+n(u)+' pingsan!</b>';
     return '';

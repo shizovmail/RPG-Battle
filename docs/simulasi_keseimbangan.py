@@ -25,6 +25,8 @@ STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan h
     'mage': dict(hp=150, atk=65, df=6),
     'healer': dict(hp=150, atk=38, df=8),
 }
+ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
+CAP = {'s1': None, 'strike': 0.70}          # batas damage satu serangan Assassin (bagian dari HP maks target), None = tanpa batas
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
 
@@ -115,9 +117,10 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
                 x['mati'] = rounds; src['kill'] += 1
                 pertama.setdefault(x['t'], x)
 
-        def serangan(x, gross, k, src):
+        def serangan(x, gross, k, src, cap=None):
             """gross = attack x persen; k = bagian defend yang dipotong (1 = normal). Urutan: Benteng -> tank menerima 100% ->
             fighter melompat (teman 5-25%, fighter 50-70%) -> fighter menghindar. Tiap penerima memakai defend-nya sendiri."""
+            if cap: gross = min(gross, cap * x['mx'] + x['df'] * k)       # batas satu serangan terhadap target ini
             net = lambda y: max(1, round(gross - y['df'] * k))
             pr = benteng.get(id(x), 1)
             mul = lambda v: max(1, round(v * pr))
@@ -142,9 +145,9 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
             if sk == 'basic':
                 if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(BASIC[r]), 1, u)
             elif r == 'assassin' and sk == 's1':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_((.90, 1.40)), 1, u)
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(ASN1), 1, u, CAP['s1'])
             elif sk == 'strike':
-                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_((2.30, 2.80)), 1, u)
+                if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(STRIKE), 1, u, CAP['strike'])
             elif r == 'mage' and sk == 's1':
                 for x in A(1 - u['t']):
                     if id(x) not in stealth: serangan(x, u['atk'] * U_((.65, 1.0)), 1, u)
