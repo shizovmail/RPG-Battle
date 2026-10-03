@@ -95,15 +95,14 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 
 | Peran | HP | Attack | Defend |
 |---|---|---|---|
-| Tank | 420 | 30 | 20 |
-| Fighter | 330 | 85 | 14 |
-| Assassin | 225 | 76 | 8 |
-| Mage | 225 | 100 | 8 |
-| Healer | 225 | 45 | 10 |
+| Tank | 360 | 24 | 25 |
+| Fighter | 285 | 56 | 18 |
+| Assassin | 158 | 80 | 8 |
+| Mage | 176 | 65 | 10 |
+| Healer | 190 | 60 | 12 |
 
-Kekuatan pemulihan Healer **diambil dari Attack-nya** (tidak ada kolom Heal): Penyembuhan 200–250% × 45 ≈ **90–112 HP**, Hujan Cahaya 80–100% × 45 ≈ **36–45 HP** untuk tiap teman.
-**Tidak ada KO sekali pukul dari HP penuh — murni dari stat, tanpa aturan khusus:** Serangan Bayangan maksimum = 280% × 76 = 212,8 dikurangi Defend target, sehingga Assassin (225 HP, Def 8) tersisa ±20 HP, Mage ±20 HP, Healer ±22 HP
-(Fighter ±131, Tank ±227). Bila guru mengubah stat, cek: `HP target − (2,8 × Attack Assassin − Defend target)` sebaiknya ≥ 15.
+Kekuatan pemulihan Healer **diambil dari Attack-nya** (tidak ada kolom Heal): Penyembuhan 200–250% × 60 = **120–150 HP**, Hujan Cahaya 80–100% × 60 = **48–60 HP** untuk tiap teman.
+**Tabel lengkap damage tiap skill ke tiap peran beserta sisa HP, dan jumlah heal: [`docs/TABEL-DAMAGE.md`](docs/TABEL-DAMAGE.md)** (dibuat ulang dengan `python3 docs/tabel_damage.py > docs/TABEL-DAMAGE.md`).
 Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat bawaan** di formulir (atau ubah di Panel wasit) untuk memakai stat baru.
 
 ### Laporan simulasi (`docs/simulasi_keseimbangan.py`)
@@ -115,45 +114,31 @@ Jalankan `python3 docs/simulasi_keseimbangan.py [giliran_maks] [jumlah_simulasi]
 
 | Mode | Pemain | Semua musuh habis | Selisih jumlah hidup | Selisih total HP | Rata-rata giliran |
 |---|---|---|---|---|---|
-| 4 vs 4 | acak | **53%** | 39% | 8% | 25,9 |
-| 4 vs 4 | terarah | **39%** | 52% | 9% | 27,4 |
-| 5 vs 5 | acak | **67%** | 28% | 5% | 24,5 |
-| 5 vs 5 | terarah | **55%** | 38% | 7% | 25,9 |
+| 4 vs 4 | acak | **32%** | 55% | 13% | 27,9 |
+| 4 vs 4 | terarah | **18%** | 68% | 14% | 29,1 |
+| 5 vs 5 | acak | **27%** | 63% | 11% | 28,6 |
+| 5 vs 5 | terarah | **15%** | 72% | 13% | 29,5 |
 
-Peran (4v4 terarah): porsi damage Assassin 42% / Mage 58%; kill akhir Assassin 64% / Mage 35%; tumbang: Mage 47%, Assassin 41%, Healer 34%, Tank 28%. Pada 5v5: damage Mage 46%, Assassin 29%, Fighter 25%.
-Dibandingkan stat lama (Assassin Attack 90 / HP 135), Assassin tidak lagi mendominasi kill (84% → 64%) dan tidak lagi menjatuhkan lawan dalam sekali serang; Mage menjadi pemberi damage terbesar.
-Uji Tank dikeroyok seluruh lawan tanpa heal: tidak pernah tumbang dalam 2 giliran (0%), tumbang dalam 3 giliran 0% (4v4) / 9% (5v5).
-
-**Karakter lemah dikeroyok** (5 vs 5, semua jawaban benar; penyerang = n karakter lawan ber-Attack terbesar: Mage, Fighter, Assassin, ...). Rata-rata giliran bertahan (maks 12–13):
-
-| Bantuan | Dikeroyok 2 lawan (Mage+Fighter) | 3 lawan (+Assassin) | 4 lawan |
-|---|---|---|---|
-| tanpa bantuan | 8–11 | 2,6 | 2,6 |
-| + Healer menyembuhkan korban tiap giliran | 12–13 | 2,7–3,2 | 2,8–3,2 |
-| + Healer + Tank (Pasang Badan ke korban) | 12–13 | 8,0–8,5 | 8,0–8,5 |
-| + Healer + Tank + Fighter | 12,5–13 | 9,4–9,7 | 9,4–9,6 |
-
-Kesimpulan: dikeroyok 2 karakter heal membuat korban hampir tak terkalahkan; dikeroyok 3–4 termasuk Assassin tanpa pelindung korban tetap tumbang ±3 giliran (heal hanya +0,1–0,6), tetapi
-dengan Tank (+ Fighter) bertahan 8–10 giliran. Heal berjalan *sebelum* serangan di giliran yang sama sehingga tidak menambal damage giliran itu; sebaiknya dipakai sebelum HP tipis.
+Peran (4v4 terarah): porsi damage Assassin 57% / Mage 42%; **kill akhir Assassin 92%** (Mage 8%); tumbang: Mage 53%, Assassin 46%, Healer 25%, Tank 12%. Tank dikeroyok seluruh lawan tanpa heal tidak pernah tumbang dalam 2 giliran.
+Karakter lemah dikeroyok 3–4 lawan: bertahan ±2,5–2,8 giliran; + Healer ±2,7–3,4; + Healer + Tank ±8,3–9,5; + Tank + Fighter ±9,8–10,7 (5 vs 5, semua jawaban benar).
 
 **Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % pertandingan berakhir: *semua musuh habis / selisih jumlah hidup / selisih total HP*; giliran maksimum = soal × (pengulangan + 1)):
 
 | Soal · ulang | Stat | Pemain terarah | Pemain acak |
 |---|---|---|---|
-| 5 · 1 (maks 10) | bawaan | 0 / 58 / 42 | 0 / 57 / 43 |
-| | HP ×0,5 | 16 / 66 / 18 | 28 / 58 / 14 |
-| | HP ×0,4 + Defend ×0,5 | 50 / 40 / 10 | 64 / 28 / 7 |
-| 5 · 2 (maks 15) | HP ×0,5 | 43 / 45 / 11 | 58 / 33 / 9 |
-| 8 · 1 (maks 16) | bawaan | 3 / 73 / 23 | 6 / 70 / 24 |
-| | HP ×0,5 | 48 / 41 / 11 | 63 / 29 / 7 |
-| 8 · 2 (maks 24) | HP ×0,5 | 74 / 20 / 5 | 85 / 11 / 3 |
-| 10 · 1 (maks 20) | bawaan | 10 / 72 / 18 | 19 / 66 / 15 |
-| | HP ×0,5 | 65 / 27 / 7 | 78 / 17 / 5 |
-| 10 · 2 (maks 30) | bawaan | 39 / 52 / 9 | 53 / 39 / 8 |
+| 5 · 1 (maks 10) | bawaan | 0 / 64 / 36 | 0 / 62 / 37 |
+| | HP ×0,5 | 6 / 75 / 19 | 14 / 69 / 17 |
+| | HP ×0,4 + Defend ×0,5 | 27 / 58 / 14 | 42 / 46 / 11 |
+| 8 · 1 (maks 16) | bawaan | 0 / 74 / 25 | 2 / 74 / 24 |
+| | HP ×0,5 | 32 / 56 / 12 | 49 / 41 / 10 |
+| 8 · 2 (maks 24) | bawaan | 8 / 75 / 17 | 18 / 66 / 16 |
+| | HP ×0,5 | 64 / 28 / 8 | 78 / 16 / 5 |
+| 10 · 1 (maks 20) | bawaan | 3 / 76 / 21 | 8 / 72 / 19 |
+| | HP ×0,5 | 50 / 40 / 9 | 67 / 26 / 7 |
+| 10 · 2 (maks 30) | bawaan | 18 / 68 / 14 | 32 / 55 / 13 |
 
-Karena HP kini lebih besar, dengan stat bawaan soal sedikit hampir tidak pernah berakhir dengan semua musuh habis. Agar seru: **(1) HP semua peran ×0,5** (soal 8–10 + 1 ulang: 48–78% habis; catatan: HP ×0,5 membuat
-Serangan Bayangan kembali bisa KO sekali pukul, jadi bila itu tidak diinginkan turunkan Attack semua karakter alih-alih HP); **(2) bila soal ≤ 6, tambah pengulangan 2–3 kali**; **(3) naikkan Attack semua karakter ×1,3 dan Assassin tetap ≤ 80**.
-Stat diubah di formulir game atau Panel wasit (lobi). Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
+Dengan stat ini soal sedikit hampir tidak pernah berakhir dengan semua musuh habis; hasilnya ditentukan selisih jumlah hidup. Agar lebih seru: HP semua peran ×0,5, atau tambah pengulangan soal 2–3 kali, atau naikkan Attack semua karakter.
+Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
 
 ### Pilih peran mandiri & koneksi otomatis
 

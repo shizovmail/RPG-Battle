@@ -19,11 +19,11 @@ CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s
       'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
 BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
 STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan heal Healer = Attack-nya)
-    'tank': dict(hp=420, atk=30, df=20),
-    'fighter': dict(hp=330, atk=85, df=14),
-    'assassin': dict(hp=225, atk=76, df=8),
-    'mage': dict(hp=225, atk=100, df=8),
-    'healer': dict(hp=225, atk=45, df=10),
+    'tank': dict(hp=360, atk=24, df=25),
+    'fighter': dict(hp=285, atk=56, df=18),
+    'assassin': dict(hp=158, atk=80, df=8),
+    'mage': dict(hp=176, atk=65, df=10),
+    'healer': dict(hp=190, atk=60, df=12),
 }
 ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung

@@ -131,11 +131,11 @@ function rpg_db()
 function rpg_stat_bawaan()
 {
     return [
-        'tank'     => ['hp' => 420, 'atk' => 30, 'def' => 20],
-        'fighter'  => ['hp' => 330, 'atk' => 85, 'def' => 14],
-        'assassin' => ['hp' => 225, 'atk' => 76, 'def' => 8],    // Serangan Bayangan maks (280%) menyisakan ±20 HP pada Assassin/Mage/Healer berHP penuh
-        'mage'     => ['hp' => 225, 'atk' => 100, 'def' => 8],
-        'healer'   => ['hp' => 225, 'atk' => 45, 'def' => 10],   // kekuatan heal Healer = Attack-nya
+        'tank'     => ['hp' => 360, 'atk' => 24, 'def' => 25],
+        'fighter'  => ['hp' => 285, 'atk' => 56, 'def' => 18],
+        'assassin' => ['hp' => 158, 'atk' => 80, 'def' => 8],
+        'mage'     => ['hp' => 176, 'atk' => 65, 'def' => 10],
+        'healer'   => ['hp' => 190, 'atk' => 60, 'def' => 12],   // kekuatan heal Healer = Attack-nya
     ];
 }
 
