@@ -77,7 +77,7 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 | 🥊 Fighter | 15–35% Attack | **Lompat Pelindung**: melompat ke depan 1 teman: teman menerima **5–25%**, fighter **50–70%**. Dipilih untuk diri sendiri ⇒ menghindar, menerima **5–25%**. Bila tank menjaga, tank yang menerima · cooldown 2 | **Rentetan Pukulan**: lawan pertama 4 pukulan × **15–30%** Attack, lalu lawan kedua (acak) 1 pukulan **45–65%** Attack, salto kembali · cooldown 2 |
 | 🗡️ Assassin | 20–50% Attack (**CRITICAL** bila > 40%) | **Tusukan Mematikan**: 90–140% Attack (**CRITICAL** bila > 115%) · cooldown 2 | **Bayangan**: tak bisa diserang giliran itu; giliran berikutnya, bila benar lagi, **Serangan Bayangan 230–280%** (**CRITICAL** bila > 250%) · cooldown 3 |
 | 🔮 Mage | 10–30% Attack | **Hujan Meteor** (Sky Heaven) / **Badai Es** (Dark Earth): semua lawan, 65–100% Attack, nilai acak tiap lawan · **cooldown 2** | **Kutukan**: 1 lawan, **langsung aktif giliran itu, 100% berhasil**: skill lawan itu gagal walau jawabannya benar, sebelum ia sempat beraksi; ia tidak tahu terkena kutukan (hasilnya sama seperti jawaban salah) · cooldown 2 |
-| ✨ Healer | 5–25% Attack | **Penyembuhan**: 1 anggota, **200–250%** Attack healer · tanpa cooldown | **Hujan Cahaya**: semua anggota, **80–100%** Attack healer (acak tiap teman) · cooldown 3 |
+| ✨ Healer | 5–25% Attack | **Penyembuhan**: 1 anggota, **100–125%** Attack healer · tanpa cooldown | **Hujan Cahaya**: semua anggota, **40–50%** Attack healer (acak tiap teman) · cooldown 3 |
 
 * **CRITICAL**: hanya Assassin. Bila persen damage melebihi ambang (40% / 115% / 250%), tulisan **CRITICAL!** merah muncul sebentar di dekat target.
 * **Penjagaan satu per satu**: tiap serangan lawan dilewatkan sendiri-sendiri ke tank/fighter penjaga. Jadi bila lawan menyerang lebih dari sekali
@@ -95,13 +95,15 @@ Semua angka berikut diacak (seragam) setiap kali dipakai. Damage = `(Attack × p
 
 | Peran | HP | Attack | Defend |
 |---|---|---|---|
-| Tank | 360 | 24 | 25 |
-| Fighter | 285 | 56 | 18 |
-| Assassin | 158 | 80 | 8 |
-| Mage | 176 | 65 | 10 |
-| Healer | 190 | 60 | 12 |
+| Tank | 330 | 24 | 12 |
+| Fighter | 250 | 56 | 9 |
+| Assassin | 225 | 75 | 2 |
+| Mage | 229 | 65 | 4 |
+| Healer | 233 | 50 | 6 |
 
-Kekuatan pemulihan Healer **diambil dari Attack-nya** (tidak ada kolom Heal): Penyembuhan 200–250% × 60 = **120–150 HP**, Hujan Cahaya 80–100% × 60 = **48–60 HP** untuk tiap teman.
+Urutan HP: Tank > Fighter > Healer > Mage > Assassin; Attack: Assassin > Mage > Fighter > Healer > Tank; Defend: Tank > Fighter > Healer > Mage > Assassin.
+Kekuatan pemulihan Healer **diambil dari Attack-nya**: Penyembuhan 100–125% × 50 = **50–62 HP**, Hujan Cahaya 40–50% × 50 = **20–25 HP** untuk tiap teman.
+**Tidak ada KO sekali pukul dari HP penuh — murni dari stat:** Serangan Bayangan maksimum = 280% × 75 = 210 dikurangi Defend target, sehingga Assassin tersisa ±17 HP, Mage ±23 HP, Healer ±29 HP, Fighter ±49 HP, Tank ±132 HP.
 **Tabel lengkap damage tiap skill ke tiap peran beserta sisa HP, dan jumlah heal: [`docs/TABEL-DAMAGE.md`](docs/TABEL-DAMAGE.md)** (dibuat ulang dengan `python3 docs/tabel_damage.py > docs/TABEL-DAMAGE.md`).
 Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat bawaan** di formulir (atau ubah di Panel wasit) untuk memakai stat baru.
 
@@ -110,35 +112,38 @@ Catatan: game yang sudah tersimpan membawa stat lama; klik **Kembalikan stat baw
 Jalankan `python3 docs/simulasi_keseimbangan.py [giliran_maks] [jumlah_simulasi]` untuk mengulang semua angka di bawah. "Acak" = skill & target acak (batas bawah),
 "terarah" = menyerang 2 lawan terlemah dan melindungi 2 sekutu terlemah; *p* = peluang menjawab benar. Kedua sisi menang ±50% (cermin).
 
-**Pertandingan penuh (soal habis di giliran 30, p = 0.7):**
+**Cara pertandingan berakhir** (soal habis di giliran 30; *habis* = semua musuh habis, di antaranya yang selesai ≤ 20 giliran; *hidup* = menang selisih jumlah karakter hidup; *HP* = menang selisih total HP; p = peluang benar):
 
-| Mode | Pemain | Semua musuh habis | Selisih jumlah hidup | Selisih total HP | Rata-rata giliran |
-|---|---|---|---|---|---|
-| 4 vs 4 | acak | **32%** | 55% | 13% | 27,9 |
-| 4 vs 4 | terarah | **18%** | 68% | 14% | 29,1 |
-| 5 vs 5 | acak | **27%** | 63% | 11% | 28,6 |
-| 5 vs 5 | terarah | **15%** | 72% | 13% | 29,5 |
+| Mode | Pemain | p | Habis (≤20 giliran) | Hidup | HP | Rata-rata giliran |
+|---|---|---|---|---|---|---|
+| 4 vs 4 | acak | 0,7 | **55%** (14%) | 36% | 9% | 26,5 |
+| 4 vs 4 | terarah | 0,7 | **41%** (8%) | 48% | 11% | 27,7 |
+| 5 vs 5 | acak | 0,7 | **64%** (19%) | 30% | 6% | 25,6 |
+| 5 vs 5 | terarah | 0,7 | **52%** (10%) | 41% | 6% | 26,8 |
+| 4 vs 4 | acak / terarah | 0,9 | 78% (34%) / 66% (20%) | 16% / 26% | 5% / 8% | 23,4 / 25,2 |
+| 5 vs 5 | acak / terarah | 0,9 | 84% (39%) / 70% (24%) | 12% / 24% | 3% / 6% | 22,5 / 24,8 |
+| 4 vs 4 | acak / terarah | 0,5 | 25% / 17% | 62% / 66% | 13% / 17% | 28,8 / 29,3 |
 
-Peran (4v4 terarah): porsi damage Assassin 57% / Mage 42%; **kill akhir Assassin 92%** (Mage 8%); tumbang: Mage 53%, Assassin 46%, Healer 25%, Tank 12%. Tank dikeroyok seluruh lawan tanpa heal tidak pernah tumbang dalam 2 giliran.
-Karakter lemah dikeroyok 3–4 lawan: bertahan ±2,5–2,8 giliran; + Healer ±2,7–3,4; + Healer + Tank ±8,3–9,5; + Tank + Fighter ±9,8–10,7 (5 vs 5, semua jawaban benar).
+Peran (4v4 terarah, p = 0,7): porsi damage Assassin 52% / Mage 47%; kill akhir Assassin 76% / Mage 24%; tumbang: Mage 49%, Assassin 42%, Tank 41%, Healer 35%.
+Tank dikeroyok seluruh lawan tanpa heal: tidak tumbang dalam 2 giliran (0–1%), dalam 3 giliran 13% (4v4) / 23% (5v5). Karakter lemah dikeroyok 3–4 lawan: bertahan ±2,7–2,9 giliran; + Healer ±2,9; + Healer + Tank ±8,0; + Tank + Fighter ±9,8 (5 vs 5, semua jawaban benar).
+**Mengapa heal diperkecil:** pada tahap sebelumnya (Healer Attack 50, heal 200–250%) simulasi rata-rata ±50 giliran karena heal ±78 HP/giliran menetralkan damage; sekarang heal 100–125% / 40–50%.
 
-**Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % pertandingan berakhir: *semua musuh habis / selisih jumlah hidup / selisih total HP*; giliran maksimum = soal × (pengulangan + 1)):
+**Permainan dengan soal sedikit** (4 vs 4, p = 0,7; kolom = % *habis / hidup / HP*; giliran maksimum = soal × (pengulangan + 1)):
 
 | Soal · ulang | Stat | Pemain terarah | Pemain acak |
 |---|---|---|---|
-| 5 · 1 (maks 10) | bawaan | 0 / 64 / 36 | 0 / 62 / 37 |
-| | HP ×0,5 | 6 / 75 / 19 | 14 / 69 / 17 |
-| | HP ×0,4 + Defend ×0,5 | 27 / 58 / 14 | 42 / 46 / 11 |
-| 8 · 1 (maks 16) | bawaan | 0 / 74 / 25 | 2 / 74 / 24 |
-| | HP ×0,5 | 32 / 56 / 12 | 49 / 41 / 10 |
-| 8 · 2 (maks 24) | bawaan | 8 / 75 / 17 | 18 / 66 / 16 |
-| | HP ×0,5 | 64 / 28 / 8 | 78 / 16 / 5 |
-| 10 · 1 (maks 20) | bawaan | 3 / 76 / 21 | 8 / 72 / 19 |
-| | HP ×0,5 | 50 / 40 / 9 | 67 / 26 / 7 |
-| 10 · 2 (maks 30) | bawaan | 18 / 68 / 14 | 32 / 55 / 13 |
+| 5 · 1 (maks 10) | bawaan | 0 / 57 / 42 | 0 / 56 / 44 |
+| | HP ×0,5 | 10 / 72 / 18 | 20 / 65 / 16 |
+| 8 · 1 (maks 16) | bawaan | 2 / 73 / 25 | 3 / 71 / 26 |
+| | HP ×0,5 | 45 / 45 / 10 | 61 / 31 / 8 |
+| 8 · 2 (maks 24) | bawaan | 20 / 66 / 15 | 30 / 56 / 14 |
+| | HP ×0,5 | 79 / 17 / 4 | 87 / 10 / 3 |
+| 10 · 1 (maks 20) | bawaan | 8 / 74 / 18 | 14 / 68 / 18 |
+| | HP ×0,5 | 65 / 28 / 6 | 78 / 17 / 5 |
+| 10 · 2 (maks 30) | bawaan | 41 / 48 / 11 | 55 / 36 / 9 |
 
-Dengan stat ini soal sedikit hampir tidak pernah berakhir dengan semua musuh habis; hasilnya ditentukan selisih jumlah hidup. Agar lebih seru: HP semua peran ×0,5, atau tambah pengulangan soal 2–3 kali, atau naikkan Attack semua karakter.
-Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
+Dengan stat bawaan, soal sedikit hampir tidak pernah berakhir dengan semua musuh habis (hasil ditentukan selisih jumlah hidup lalu total HP). Agar lebih seru: tambah pengulangan soal 2–3 kali, atau kecilkan HP semua peran ×0,5
+(catatan: HP ×0,5 membuat Serangan Bayangan kembali bisa KO sekali pukul). Model biasa minimal 8 soal per putaran, model kategori minimal 4 soal per kategori.
 
 ### Pilih peran mandiri & koneksi otomatis
 

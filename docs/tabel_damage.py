@@ -53,12 +53,12 @@ def tabel_heal():
            'Pemulihan berhenti di HP maksimal. Kolom terakhir: HP setelah di-heal bila teman sedang sekarat dengan HP 20.\n',
            '| Skill | Persen | Jumlah pulih (min-maks, rata-rata) |', '|---|---|---|']
     atk = STAT['healer']['atk']
-    for nm, (lo, hi) in (('Penyembuhan (skill 1, 1 teman)', (2.0, 2.5)), ('Hujan Cahaya (skill 2, tiap teman)', (.8, 1.0))):
+    for nm, (lo, hi) in (('Penyembuhan (skill 1, 1 teman)', (1.0, 1.25)), ('Hujan Cahaya (skill 2, tiap teman)', (.4, .5))):
         out.append('| %s | %d%%-%d%% | %d-%d (rata %d) |' % (nm, round(lo * 100), round(hi * 100), round(atk * lo), round(atk * hi), round(atk * (lo + hi) / 2)))
     out += ['', '| Teman | HP maks | Penyembuhan: % HP maks | HP setelah heal dari HP 20 | Hujan Cahaya: % HP maks | HP setelah heal dari HP 20 |', '|---|---|---|---|---|---|']
     for t in ROLES:
         hp = STAT[t]['hp']
-        a0, a1, b0, b1 = round(atk * 2.0), round(atk * 2.5), round(atk * .8), round(atk * 1.0)
+        a0, a1, b0, b1 = round(atk * 1.0), round(atk * 1.25), round(atk * .4), round(atk * .5)
         out.append('| %s | %d | %d%%-%d%% | %d-%d | %d%%-%d%% | %d-%d |' % (NAMA[t], hp, round(100 * a0 / hp), round(100 * a1 / hp), min(hp, 20 + a0), min(hp, 20 + a1),
                                                                       round(100 * b0 / hp), round(100 * b1 / hp), min(hp, 20 + b0), min(hp, 20 + b1)))
     return '\n'.join(out) + '\n'

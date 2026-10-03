@@ -26,8 +26,8 @@ const RPG_F_MENGHINDAR = [0.05, 0.25];   // ... melindungi diri sendiri (menghin
 const RPG_F_PUKUL = [0.15, 0.30];        // Fighter Rentetan Pukulan: tiap pukulan lawan pertama (4 pukulan)
 const RPG_F_PUKUL_N = 4;
 const RPG_F_SUSUL = [0.45, 0.65];        // pukulan ke lawan kedua
-const RPG_HEAL_1 = [2.00, 2.50];         // Healer skill 1: 200-250% Attack healer
-const RPG_HEAL_SEMUA = [0.80, 1.00];     // Healer skill 2: 80-100% Attack healer, acak per teman
+const RPG_HEAL_1 = [1.00, 1.25];         // Healer skill 1: 100-125% Attack healer
+const RPG_HEAL_SEMUA = [0.40, 0.50];     // Healer skill 2: 40-50% Attack healer, acak per teman
 function rpg_basic_rentang($peran)
 {
     $r = ['tank' => [0.10, 0.20], 'healer' => [0.05, 0.25], 'mage' => [0.10, 0.30], 'assassin' => [0.20, 0.50], 'fighter' => [0.15, 0.35]];
@@ -131,11 +131,11 @@ function rpg_db()
 function rpg_stat_bawaan()
 {
     return [
-        'tank'     => ['hp' => 360, 'atk' => 24, 'def' => 25],
-        'fighter'  => ['hp' => 285, 'atk' => 56, 'def' => 18],
-        'assassin' => ['hp' => 158, 'atk' => 80, 'def' => 8],
-        'mage'     => ['hp' => 176, 'atk' => 65, 'def' => 10],
-        'healer'   => ['hp' => 190, 'atk' => 60, 'def' => 12],   // kekuatan heal Healer = Attack-nya
+        'tank'     => ['hp' => 330, 'atk' => 24, 'def' => 12],
+        'fighter'  => ['hp' => 250, 'atk' => 56, 'def' => 9],
+        'assassin' => ['hp' => 225, 'atk' => 75, 'def' => 2],     // Serangan Bayangan maks (280%) menyisakan ±17-29 HP pada Assassin/Mage/Healer berHP penuh
+        'mage'     => ['hp' => 229, 'atk' => 65, 'def' => 4],
+        'healer'   => ['hp' => 233, 'atk' => 50, 'def' => 6],    // kekuatan heal Healer = Attack-nya
     ];
 }
 
@@ -249,9 +249,9 @@ function rpg_skill_katalog($peran, $tim = 1)
         case 'healer':
             return [
                 ['id' => 's1', 'nama' => 'Penyembuhan', 'ikon' => '💚', 'tgt' => 'sekutu', 'cd' => 0,
-                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri) sebesar 200–250% Attack-mu. Tanpa cooldown.'],
+                    'desc' => 'Pulihkan HP 1 anggota tim (boleh diri sendiri) sebesar 100–125% Attack-mu. Tanpa cooldown.'],
                 ['id' => 's2', 'nama' => 'Hujan Cahaya', 'ikon' => '🌟', 'tgt' => 'tidak', 'cd' => 3,
-                    'desc' => 'Pulihkan HP SEMUA anggota tim sebesar 80–100% Attack-mu (acak tiap teman). Cooldown 3 giliran.'],
+                    'desc' => 'Pulihkan HP SEMUA anggota tim sebesar 40–50% Attack-mu (acak tiap teman). Cooldown 3 giliran.'],
                 $basic,
             ];
         case 'assassin':

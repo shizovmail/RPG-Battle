@@ -19,13 +19,14 @@ CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s
       'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
 BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
 STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan heal Healer = Attack-nya)
-    'tank': dict(hp=360, atk=24, df=25),
-    'fighter': dict(hp=285, atk=56, df=18),
-    'assassin': dict(hp=158, atk=80, df=8),
-    'mage': dict(hp=176, atk=65, df=10),
-    'healer': dict(hp=190, atk=60, df=12),
+    'tank': dict(hp=330, atk=24, df=12),
+    'fighter': dict(hp=250, atk=56, df=9),
+    'assassin': dict(hp=225, atk=75, df=2),
+    'mage': dict(hp=229, atk=65, df=4),
+    'healer': dict(hp=233, atk=50, df=6),
 }
 ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
+HEAL1, HEAL2 = (1.0, 1.25), (.40, .50)      # Penyembuhan / Hujan Cahaya (kali Attack healer)
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
 
@@ -107,7 +108,7 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
                 tl = [tg] if sk == 's1' else A(u['t'])
                 for x in tl:
                     if x['hp'] > 0:
-                        amt = max(1, round(u['heal'] * (U_((2.0, 2.5)) if sk == 's1' else U_((.80, 1.0)))))
+                        amt = max(1, round(u['heal'] * (U_(HEAL1) if sk == 's1' else U_(HEAL2))))
                         e = min(x['mx'], x['hp'] + amt) - x['hp']; x['hp'] += e; u['pulih'] += e
 
         def kena(x, d, src):
@@ -198,7 +199,7 @@ def laporan(S, p, maks, n, fighter, gaya):
     return dict(pulih=round(st.mean(r['pulih'] for r in R) / max(1, st.mean(r['rounds'] for r in R))),
                 giliran=round(st.mean(r['rounds'] for r in R), 1),
                 kiri=pct(lambda r: r['win'] == 0), kanan=pct(lambda r: r['win'] == 1),
-                habis=pct(lambda r: r['how'] == 'habis'), hidup=pct(lambda r: r['how'] == 'hidup'),
+                habis=pct(lambda r: r['how'] == 'habis'), habis20=pct(lambda r: r['how'] == 'habis' and r['rounds'] <= 20), hidup=pct(lambda r: r['how'] == 'hidup'),
                 hp=pct(lambda r: r['how'] == 'hp'), seri=pct(lambda r: r['how'] == 'seri'), peran=rep)
 
 
@@ -257,8 +258,8 @@ if __name__ == '__main__':
             print('== %s | pemain %s' % ('5 vs 5 (dengan Fighter)' if fighter else '4 vs 4', gaya))
             for p in (0.5, 0.7, 0.9):
                 r = laporan(STAT, p, maks, n, fighter, gaya)
-                print('  p=%.1f giliran %4.1f | menang Sky/Dark %2d%%/%2d%% | via habis %2d%% · selisih hidup %2d%% · selisih HP %2d%% · seri %d%%' %
-                      (p, r['giliran'], r['kiri'], r['kanan'], r['habis'], r['hidup'], r['hp'], r['seri']))
+                print('  p=%.1f giliran %4.1f | menang Sky/Dark %2d%%/%2d%% | via habis %2d%% (di antaranya selesai <=20 giliran %2d%%) · selisih hidup %2d%% · selisih HP %2d%% · seri %d%%' %
+                      (p, r['giliran'], r['kiri'], r['kanan'], r['habis'], r['habis20'], r['hidup'], r['hp'], r['seri']))
             print('   Per peran (p=0.7):')
             lap = laporan(STAT, 0.7, maks, n, fighter, gaya)
             cetak_peran(lap['peran'])
