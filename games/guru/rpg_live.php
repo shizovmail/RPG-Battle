@@ -291,7 +291,7 @@ page_header('Panel wasit', 'guru/game.php');
     return '';
   }
   function riwayat(){
-    hashPer('riw', [RIW.length, ST && ST.unit.map(function(u){ return u.nama; })], function(){
+    hashPer('riw', [RIW.length, ST && ST.unit && ST.unit.map(function(u){ return u.nama; })], function(){
       var el = document.getElementById('riw'); if (!el) return;
       if (!RIW.length) { el.innerHTML = '<span class="muted">Belum ada giliran selesai.</span>'; return; }
       el.innerHTML = RIW.slice().reverse().map(function(r){

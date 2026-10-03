@@ -595,7 +595,7 @@ function rpg_mulai_soal($sid)
 function rpg_antrian($s)
 {
     $a = json_decode((string)$s['antrian'], true);
-    if (!is_array($a)) $a = ['seed' => 1, 'n' => 1];
+    $a = array_merge(['seed' => 1, 'n' => 1, 'mode' => 'biasa'], is_array($a) ? $a : []);   // sesi di lobi belum punya antrian
     if (!isset($a['susun'])) {   // sesi lama: pakai seluruh soal tiap putaran
         $a['susun'] = [];
         for ($pu = 0; $pu < 12; $pu++) {

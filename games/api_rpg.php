@@ -1,4 +1,5 @@
 <?php
+ini_set('display_errors', '0');   // peringatan PHP tidak boleh ikut tercetak ke JSON (XAMPP biasanya menyalakan display_errors)
 // API game live RPG Battle. Bagian murid tanpa login; bagian guru butuh sesi login + pemilik game.
 require __DIR__ . '/config.php';
 require __DIR__ . '/inc/db.php';
@@ -326,7 +327,7 @@ function rpg_gstate($game, $s)
     }
     $bank = count((json_decode((string)$game['data'], true) ?: [])['soal'] ?? []);
     list($bisa, $alasan) = $s['status'] === 'lobi' ? rpg_bisa_mulai($sid) : [true, ''];
-    $maksR = rpg_giliran_maks($s);
+    $maksR = $s['status'] === 'lobi' ? rpg_maks_dari_data(json_decode((string)$game['data'], true) ?: [], (int)$cfg['ulang'], (int)$cfg['soal_per_putaran']) : rpg_giliran_maks($s);
     $r = [
         'ok' => true, 'sesi' => $sid, 'st' => $s['status'], 'ronde' => (int)$s['ronde'], 'sblm' => $s['sblm'],
         'cfg' => $cfg, 'bank' => $bank, 'unit' => rpg_unit_tampil($s, $units, $slot, true), 'pemain' => $pem,
