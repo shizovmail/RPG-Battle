@@ -168,7 +168,7 @@ Bilangan prima terkecil | 2 | dua</pre>
     </table></div>
     <details style="margin-top:12px"><summary class="small"><b>Daftar skill & pengali damage</b></summary>
       <ul class="small">
-        <li><b>Serangan Dasar</b> (tanpa cooldown, selalu ke 1 lawan, % attack diacak tiap serangan): Tank 10–20% · Healer 5–25% · Mage 10–30% · Fighter 15–35% · Assassin 20–50% (di atas 40% = <span style="color:#d32f2f"><b>CRITICAL</b></span>).</li>
+        <li><b>Serangan Dasar</b> (tanpa cooldown, selalu ke 1 lawan, % attack diacak tiap serangan): <b>15–25% Attack</b> untuk semua karakter.</li>
         <li><b>Tank</b> – Pasang Badan (pindah ke depan 1 <u>teman</u>, bukan diri sendiri; teman itu 0 damage, tank menerima 100% tiap serangan yang tertuju ke temannya, selain serangan yang memang tertuju padanya, memakai Defend tank; tanpa cooldown); Benteng Tim (semua anggota, damage lawan dikurangi acak 30–40% sehingga masuk 60–70%, cooldown 2).</li>
         <li><b>Fighter</b> (opsional) – Lompat Pelindung (melompat ke depan 1 teman: teman menerima 5–25%, fighter 50–70%; untuk diri sendiri fighter menghindar dan menerima 5–25%; bila tank menjaga, tank yang menerima; cooldown 2); Rentetan Pukulan (4 pukulan × 15–30% Attack ke lawan pertama, lalu 1 pukulan 45–65% Attack ke lawan lain acak, lalu salto kembali; cooldown 2).</li>
         <li><b>Healer</b> – Penyembuhan (1 anggota = 100–125% Attack healer, tanpa cooldown); Hujan Cahaya (semua anggota = 40–50% Attack healer, acak per teman, cooldown 3).</li>

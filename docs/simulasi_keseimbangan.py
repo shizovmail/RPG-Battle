@@ -17,7 +17,7 @@ import random, statistics as st, sys
 BASE = ['tank', 'assassin', 'mage', 'healer']
 CD = {'tank': {'s1': 0, 's2': 2}, 'fighter': {'s1': 2, 's2': 2}, 'assassin': {'s1': 2, 's2': 3},
       'mage': {'s1': 2, 's2': 2}, 'healer': {'s1': 0, 's2': 3}}
-BASIC = {'tank': (.10, .20), 'healer': (.05, .25), 'mage': (.10, .30), 'assassin': (.20, .50), 'fighter': (.15, .35)}
+BASIC = {r: (.15, .25) for r in ('tank', 'fighter', 'assassin', 'mage', 'healer')}   # Serangan Dasar sama untuk semua
 STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan heal Healer = Attack-nya)
     'tank': dict(hp=330, atk=24, df=12),
     'fighter': dict(hp=250, atk=56, df=9),
@@ -27,6 +27,7 @@ STAT = {  # sama dengan rpg_stat_bawaan() di PHP: hp, attack, defend (kekuatan h
 }
 ASN1, STRIKE = (.90, 1.40), (2.30, 2.80)   # Assassin skill 1 / Serangan Bayangan
 HEAL1, HEAL2 = (1.0, 1.25), (.40, .50)      # Penyembuhan / Hujan Cahaya (kali Attack healer)
+INISIATIF = False                             # False = serangan serempak (bawaan game); True = urutan acak menentukan siapa sempat menyerang
 BENTENG = (.60, .70)                          # Benteng Tim: damage masuk (dikurangi acak 30-40%)
 F_TEMAN, F_DIRI, F_HINDAR = (.05, .25), (.50, .70), (.05, .25)   # Lompat Pelindung
 
@@ -145,6 +146,7 @@ def main_satu(S, p, seed, maks, fighter, gaya, noheal=False, fk=None):
         rnd.shuffle(acts)
         for u, sk, tg, ok in acts:
             if not ok: continue
+            if INISIATIF and u['hp'] <= 0: continue      # (opsional) yang sudah jatuh oleh serangan sebelumnya tidak sempat menyerang
             r = u['r']
             if sk == 'basic':
                 if id(tg) not in stealth and tg['hp'] > 0: serangan(tg, u['atk'] * U_(BASIC[r]), 1, u)

@@ -18,7 +18,7 @@ require_once __DIR__ . '/live.php';   // memakai live_norm, live_acak, live_tx
 const RPG_AOE = [0.65, 1.00];            // Mage skill 1: tiap lawan mendapat nilai acak sendiri (% attack)
 const RPG_ASSASSIN_1 = [0.90, 1.40];     // Assassin skill 1 (Critical bila > 115%)
 const RPG_STRIKE = [2.30, 2.80];         // Serangan Bayangan (Critical bila > 250%)
-const RPG_CRIT = ['basic' => 0.40, 's1' => 1.15, 'strike' => 2.50];   // ambang Critical Assassin
+const RPG_CRIT = ['s1' => 1.15, 'strike' => 2.50];   // ambang Critical Assassin
 const RPG_BENTENG = [0.60, 0.70];        // Benteng Tim: damage masuk 60-70% (dikurangi acak 30-40% per anggota)
 const RPG_F_TEMAN = [0.05, 0.25];        // Fighter Lompat Pelindung: teman menerima 5-25%
 const RPG_F_DIRI = [0.50, 0.70];         // ... fighter menerima 50-70%
@@ -30,8 +30,7 @@ const RPG_HEAL_1 = [1.00, 1.25];         // Healer skill 1: 100-125% Attack heal
 const RPG_HEAL_SEMUA = [0.40, 0.50];     // Healer skill 2: 40-50% Attack healer, acak per teman
 function rpg_basic_rentang($peran)
 {
-    $r = ['tank' => [0.10, 0.20], 'healer' => [0.05, 0.25], 'mage' => [0.10, 0.30], 'assassin' => [0.20, 0.50], 'fighter' => [0.15, 0.35]];
-    return $r[$peran] ?? [0.10, 0.20];
+    return [0.15, 0.25];   // Serangan Dasar sama untuk semua karakter: 15-25% Attack
 }
 function rpg_acak(array $r) { return random_int((int)round($r[0] * 1000), (int)round($r[1] * 1000)) / 1000; }
 

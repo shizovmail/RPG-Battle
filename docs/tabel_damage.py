@@ -8,7 +8,7 @@ from simulasi_keseimbangan import STAT
 
 NAMA = {'tank': 'Tank', 'fighter': 'Fighter', 'assassin': 'Assassin', 'mage': 'Mage', 'healer': 'Healer'}
 ROLES = ['tank', 'fighter', 'assassin', 'mage', 'healer']
-BASIC = {'tank': (.10, .20), 'fighter': (.15, .35), 'assassin': (.20, .50), 'mage': (.10, .30), 'healer': (.05, .25)}
+BASIC = {r: (.15, .25) for r in ('tank', 'fighter', 'assassin', 'mage', 'healer')}   # Serangan Dasar sama untuk semua
 # (penyerang, skill, rentang persen, catatan)
 SKILL = [('tank', 'Serangan dasar', BASIC['tank']), ('fighter', 'Serangan dasar', BASIC['fighter']),
          ('fighter', 'Rentetan Pukulan - pukulan ke-5 (lawan kedua)', (.45, .65)),
